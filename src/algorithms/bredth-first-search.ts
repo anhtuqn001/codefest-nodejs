@@ -1,8 +1,10 @@
 import { getDestinationNode } from ".";
 import {
   BOMB_AFFECTED_NODE,
+  CANNOT_GO_NODE,
   EGG_NODE,
   NORMAL_NODE,
+  START_BOMB_AFFECTED_NODE,
   STONE_NODE,
   WOOD_NODE,
 } from "../constants";
@@ -151,10 +153,11 @@ export const createBombGrid = (
   playerBombPower: number
 ): IGrid => {
   if (!startNode) return [];
-  console.log('playerBombPower', playerBombPower);
   const grid: IGrid = [];
   const numberOfRow = rawGrid.length;
   const numberOfCol = rawGrid[0].length;
+  const bombsAreaMap = getBombAffectedAreaMap(bombNodes, playerBombPower);
+  const startbombsAreaMap = getBombAffectedAreaMap([startNode], playerBombPower);
   for (let rowIndex = 0; rowIndex < numberOfRow; rowIndex++) {
     grid[rowIndex] = [];
     for (let colIndex = 0; colIndex < numberOfCol; colIndex++) {
@@ -164,23 +167,20 @@ export const createBombGrid = (
           : false;
       const isBombAffectedNode =
         bombNodes?.length > 0
-          ? bombNodes.some((bombNode) => {
-              return (
-                (bombNode.col === colIndex && bombNode.row === rowIndex) ||
-                (bombNode.col + playerBombPower === colIndex && bombNode.row === rowIndex) ||
-                (bombNode.col - playerBombPower === colIndex && bombNode.row === rowIndex) ||
-                (bombNode.col === colIndex && bombNode.row + playerBombPower === rowIndex) ||
-                (bombNode.col === colIndex && bombNode.row - playerBombPower === rowIndex)
-              );
-            })
+          ? bombsAreaMap[rowIndex.toString()] && bombsAreaMap[rowIndex.toString()].includes(colIndex)
           : false;
+      const isStartBombAffectedNode = startbombsAreaMap[rowIndex.toString()] && startbombsAreaMap[rowIndex.toString()].includes(colIndex)
+      let value = null;
+      if (CANNOT_GO_NODE.includes(rawGrid[rowIndex][colIndex])) {
+        value = rawGrid[rowIndex][colIndex];
+      } else {
+        value = isStartBombAffectedNode ? START_BOMB_AFFECTED_NODE : (isBombAffectedNode ? BOMB_AFFECTED_NODE : rawGrid[rowIndex][colIndex]);
+      }
       grid[rowIndex].push(
         createNode(
           rowIndex,
           colIndex,
-          isBombAffectedNode || isStart
-            ? BOMB_AFFECTED_NODE
-            : rawGrid[rowIndex][colIndex],
+          value,
           isStart
         )
       );
@@ -241,4 +241,18 @@ export const findTheNearestPositionOfNode = (rawGrid: IRawGrid, startPosition: I
     row: destinationNode.row,
     col: destinationNode.col,
   }
+}
+
+export const getBombAffectedAreaMap = (bombsPositions: IPosition[], power: number) => {
+  const bombsAreaMap: { [key: string] : number[]} = {}
+  for (let i = 0; i < bombsPositions.length; i++) {
+    bombsAreaMap[bombsPositions[i].row] = [...(bombsAreaMap[bombsPositions[i].row] ?? []), bombsPositions[i].col];
+    for (let j = 1; j < power + 1; j++) {
+      bombsAreaMap[bombsPositions[i].row - j] = [...(bombsAreaMap[bombsPositions[i].row - j ] ?? []), bombsPositions[i].col];
+      bombsAreaMap[bombsPositions[i].row + j] = [...(bombsAreaMap[bombsPositions[i].row + j] ?? []), bombsPositions[i].col];
+      bombsAreaMap[bombsPositions[i].row] = [...(bombsAreaMap[bombsPositions[i].row] ?? []), bombsPositions[i].col + j];
+      bombsAreaMap[bombsPositions[i].row] = [...(bombsAreaMap[bombsPositions[i].row] ?? []), bombsPositions[i].col - j];
+    }
+  }
+  return bombsAreaMap;
 }

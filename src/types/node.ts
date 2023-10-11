@@ -20,7 +20,8 @@ export enum TNodeValue {
   STONE_NODE = 1,
   WOOD_NODE = 2,
   EGG_NODE = 5,
-  BOMB_AFFECTED_NODE = 10
+  BOMB_AFFECTED_NODE = 10,
+  START_BOMB_AFFECTED_NODE = 11
 }
 
 export interface IPosition {

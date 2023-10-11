@@ -27,7 +27,6 @@ import { BehaviorSubject } from "rxjs";
 import PlaceBombTask from "./tasks/place-bom";
 import GoToTask from "./tasks/go-to";
 import MainTaskStack from "./state/main-task-stack";
-import BaseTask from "./tasks/base-task";
 const targetServer = "http://localhost";
 
 const app = express();
@@ -46,22 +45,11 @@ server.listen(port, () => {
 });
 export const socket = ioc(targetServer);
 
-let startNodeGlobal: INode | undefined = undefined;
-let endNodeGlobal: INode | undefined = undefined;
-let isAbleToGetData = true;
-
 const globalSubject = new BehaviorSubject<IMapInfo>({
   map: [],
   bombs: [],
   players: [],
 });
-
-// const taskMapper: {
-//   [key: string]: BaseTask;
-// } = {
-//   "go-to": PlaceBombTask,
-//   "place-bomb-task": PlaceBombTask
-// }
 
 export const mainTaskStackSubject = new BehaviorSubject<{
   action: IMainStackAction;
@@ -139,9 +127,6 @@ socket.on("join game", (res) => {
 
 //API-2
 socket.on("ticktack player", (res) => {
-  if (res?.map_info?.bombs?.length > 0) {
-    // console.log('bombs', res?.map_info?.bombs[0]);
-  }
   const map: IRawGrid = res?.map_info?.map ?? [];
   const bombs: IBomb[] = res?.map_info?.bombs ?? [];
   const players: IPlayer[] = res.map_info?.players ?? [];
@@ -152,28 +137,11 @@ socket.on("ticktack player", (res) => {
       bombs,
       players,
     });
-  }
+  }  
+
   mainTaskStackSubject.next({
     action: IMainStackAction.DO,
   });
-
-  if (!isAbleToGetData) return;
-  // console.info("> ticktack", res);
-  //   socket.emit("drive player", { direction: testArray[testNumber] });
-  //   testNumber++;
-  //   const player = getPlayer(res.map_info.players);
-  //   const startNode = getStartNode(res.map_info.map, player.currentPosition);
-  //   startNodeGlobal = startNode;
-  //   const endNode = getEndNode(res.map_info.map);
-  //   endNodeGlobal = endNode;
-  // const nodeGrid = createGrid(res.map_info.map, startNodeGlobal, endNodeGlobal);
-  //   const inOrderVisitedArray = breadthFirstSearch(nodeGrid, startNode);
-  //   const destinationNode = getDestinationNode(inOrderVisitedArray);
-  //   printPath(destinationNode);
-  // socket.emit('drive player', { direction: 'b244343434331'})
-  // const player = getPlayer();
-  // console.log('res.map_info.players', res.map_info.players);
-  isAbleToGetData = false;
 });
 
 // API-3a

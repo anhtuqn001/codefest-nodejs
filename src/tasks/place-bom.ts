@@ -6,6 +6,7 @@ import {
   IPosition,
   ITask,
   ITaskState,
+  TNodeValue,
 } from "../types/node";
 import BaseTask from "./base-task";
 import { socket } from "../app";
@@ -20,7 +21,7 @@ import {
   createBombGrid,
   getShortestPath,
 } from "../algorithms/bredth-first-search";
-import { BOMB_AFFECTED_NODE, NORMAL_NODE } from "../constants";
+import { BOMB_AFFECTED_NODE, NORMAL_NODE, START_BOMB_AFFECTED_NODE } from "../constants";
 
 export default class PlaceBombTask extends BaseTask {
   name = "place-bomb-task";
@@ -51,7 +52,7 @@ export default class PlaceBombTask extends BaseTask {
     const nodeGrid = createBombGrid(rawGrid, startNode, bombs, player.power);
     const inOrderVisitedArray = breadthFirstSearch(
       nodeGrid,
-      [NORMAL_NODE, BOMB_AFFECTED_NODE],
+      [NORMAL_NODE, START_BOMB_AFFECTED_NODE],
       undefined,
       [NORMAL_NODE]
     );
