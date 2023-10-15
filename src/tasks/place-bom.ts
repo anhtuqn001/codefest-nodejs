@@ -28,7 +28,6 @@ export default class PlaceBombTask extends BaseTask {
   bombPlaced: IPosition | undefined = undefined;
   safePlace: IPosition | undefined = undefined;
   thiz: PlaceBombTask = this;
-  isStopForTesting = false;
   movingOn: IPosition | undefined = undefined;
   constructor(globalSubject: IGloBalSubject) {
     super(globalSubject);

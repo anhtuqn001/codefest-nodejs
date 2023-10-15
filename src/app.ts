@@ -21,16 +21,25 @@ import {
   INode,
   IPlayer,
   IRawGrid,
+  ISpoil,
   TNodeValue,
 } from "./types/node";
-import { BehaviorSubject } from "rxjs";
+import { BehaviorSubject, delay, of } from "rxjs";
 import PlaceBombTask from "./tasks/place-bom";
 import GoToTask from "./tasks/go-to";
 import MainTaskStack from "./state/main-task-stack";
+import { collectItemAdviser, collectItemAdviserSubject } from "./advisers/collect-item-adviser";
+import bodyParser from "body-parser";
+import CollectItemTask from "./tasks/collect-item";
+
 const targetServer = "http://localhost";
 
 const app = express();
 const port = 3000;
+app.use(bodyParser.urlencoded({
+  extended: true
+}));
+app.use(bodyParser.json());
 
 let server;
 
@@ -38,17 +47,23 @@ app.get("/", function (req, res) {
   res.send("Hello world!");
 });
 
+app.post("/:action", function (req, res) {
+  socket.emit("drive player", { direction: req?.params?.action });
+  res.send('success');
+});
+
 server = http.createServer(app);
 
 server.listen(port, () => {
-  console.log("listening on *:3000");
+  // console.log("listening on *:3000");
 });
 export const socket = ioc(targetServer);
 
-const globalSubject = new BehaviorSubject<IMapInfo>({
+export const globalSubject = new BehaviorSubject<IMapInfo>({
   map: [],
   bombs: [],
   players: [],
+  spoils: [],
 });
 
 export const mainTaskStackSubject = new BehaviorSubject<{
@@ -59,6 +74,7 @@ export const mainTaskStackSubject = new BehaviorSubject<{
     taskId?: string;
   };
 } | null>(null);
+
 
 mainTaskStackSubject.subscribe((mainStackBehavior) => {
   if (mainStackBehavior) {
@@ -71,6 +87,9 @@ mainTaskStackSubject.subscribe((mainStackBehavior) => {
         }
         if (params?.taskName === "place-bomb-task") {
           task = new PlaceBombTask(globalSubject);
+        }
+        if(params?.taskName === "collect-item") {
+          task = new CollectItemTask(globalSubject);
         }
         if (task) {
           mainTaskStack.addNewTask(task);
@@ -91,7 +110,6 @@ mainTaskStackSubject.subscribe((mainStackBehavior) => {
 });
 
 const mainTaskStack = new MainTaskStack();
-// const placeBombTask = new GoToTask(globalSubject, EGG_NODE, true);
 mainTaskStackSubject.next({
   action: IMainStackAction.ADD,
   params: {
@@ -99,9 +117,9 @@ mainTaskStackSubject.next({
     target: EGG_NODE,
   },
 });
-
+// collectItemAdviserSubject.subscribe(collectItemAdviser);
 socket.on("connect", () => {
-  console.log("[Socket] connected to server");
+  // console.log("[Socket] connected to server");
   // API-1a
   socket.emit("join game", { game_id: GAME_ID, player_id: PLAYER_ID });
 });
@@ -122,7 +140,7 @@ socket.on("error", (err) => {
 
 // API-1b
 socket.on("join game", (res) => {
-  console.log("[Socket] join-game responsed", res);
+  // console.log("[Socket] join-game responsed", res);
 });
 
 //API-2
@@ -130,12 +148,14 @@ socket.on("ticktack player", (res) => {
   const map: IRawGrid = res?.map_info?.map ?? [];
   const bombs: IBomb[] = res?.map_info?.bombs ?? [];
   const players: IPlayer[] = res.map_info?.players ?? [];
+  const spoils: ISpoil[] = res.map_info?.spoils ?? [];
   // const player = getPlayer(res.map_info.players);
   if (res?.map_info) {
     globalSubject.next({
       map,
       bombs,
       players,
+      spoils
     });
   }  
 
@@ -149,5 +169,12 @@ socket.on("ticktack player", (res) => {
 
 //API-3b
 socket.on("drive player", (res) => {
-  console.log("[Socket] drive-player responsed, res: ", res);
+  // console.log("[Socket] drive-player responsed, res: ", res);
+  // if (res.direction.includes('b')) {
+  //   of("1")
+  //   .pipe(delay(2300)).subscribe(() => {
+  //     // collectItemAdviserSubject.next(null);
+  //     collectItemAdviser()
+  //   })
+  // }
 });

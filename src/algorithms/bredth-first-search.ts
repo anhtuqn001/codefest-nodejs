@@ -1,14 +1,15 @@
-import { getDestinationNode } from ".";
+import { getDestinationNode, getMappedBombWithPower } from ".";
 import {
   BOMB_AFFECTED_NODE,
   CANNOT_GO_NODE,
   EGG_NODE,
   NORMAL_NODE,
+  PLAYER_ID,
   START_BOMB_AFFECTED_NODE,
   STONE_NODE,
   WOOD_NODE,
 } from "../constants";
-import { IGrid, INode, IPosition, IRawGrid, TNodeValue } from "../types/node";
+import { IBomb, IBombWithPower, IGrid, INode, IPlayer, IPosition, IRawGrid, TNodeValue } from "../types/node";
 
 export const breadthFirstSearch = (
   grid: IGrid,
@@ -24,7 +25,12 @@ export const breadthFirstSearch = (
   startNode.isVisited = true;
   queue.push(startNode);
   while (!!queue.length) {
-    let neighbors = getUnvisitedNeighbors(queue[0], grid, allowedNodes, notAllowedNodes);
+    let neighbors = getUnvisitedNeighbors(
+      queue[0],
+      grid,
+      allowedNodes,
+      notAllowedNodes
+    );
     updateNeightborNodes(queue[0], neighbors);
     queue = [...queue, ...neighbors];
     let nodeToTraverse = queue.shift();
@@ -32,7 +38,7 @@ export const breadthFirstSearch = (
       inOrderVisitedArray.push(nodeToTraverse);
     }
     if (!nodeToTraverse) continue;
-    
+
     if (nodesToStop && nodesToStop.length > 0) {
       if (nodesToStop.includes(nodeToTraverse?.value)) {
         nodeToTraverse.isDestination = true;
@@ -53,29 +59,36 @@ const updateNeightborNodes = (node: INode, neighbors: INode[]) => {
   }
 };
 
-const getUnvisitedNeighbors = (node: INode, grid: IGrid, allowedNodes?: TNodeValue[], notAllowedNodes?: TNodeValue[]) => {
+const getUnvisitedNeighbors = (
+  node: INode,
+  grid: IGrid,
+  allowedNodes?: TNodeValue[],
+  notAllowedNodes?: TNodeValue[]
+) => {
   let neighbors: INode[] = [];
   let { row, col } = node;
-  if(row > 0 && grid[row - 1][col]) neighbors.push(grid[row - 1][col]);
-  if(row < grid.length - 1) neighbors.push(grid[row + 1][col]);
-  if(col > 0) neighbors.push(grid[row][col-1]);
-  if(col < grid[0].length - 1) neighbors.push(grid[row][col+1]);
+  if (row > 0 && grid[row - 1][col]) neighbors.push(grid[row - 1][col]);
+  if (row < grid.length - 1) neighbors.push(grid[row + 1][col]);
+  if (col > 0) neighbors.push(grid[row][col - 1]);
+  if (col < grid[0].length - 1) neighbors.push(grid[row][col + 1]);
   // neighbors = randomlyProvideNeighbors(node, grid, neighbors);
-  return neighbors.filter(
-    (node) => {
-      let defaultAllowedNodes = [NORMAL_NODE];
-      let defaultNotAllowedNodes = [STONE_NODE];
-      if (allowedNodes && allowedNodes.length > 0) {
-        defaultAllowedNodes = allowedNodes;
-        return node.isVisited === false && defaultAllowedNodes.includes(node.value);
-      }
-      if (notAllowedNodes && notAllowedNodes.length > 0) {
-        defaultNotAllowedNodes = notAllowedNodes;
-        return node.isVisited === false && !defaultNotAllowedNodes.includes(node.value);
-      }
-      return node.isVisited === false && defaultAllowedNodes.includes;
+  return neighbors.filter((node) => {
+    let defaultAllowedNodes = [NORMAL_NODE];
+    let defaultNotAllowedNodes = [STONE_NODE];
+    if (allowedNodes && allowedNodes.length > 0) {
+      defaultAllowedNodes = allowedNodes;
+      return (
+        node.isVisited === false && defaultAllowedNodes.includes(node.value)
+      );
     }
-  );
+    if (notAllowedNodes && notAllowedNodes.length > 0) {
+      defaultNotAllowedNodes = notAllowedNodes;
+      return (
+        node.isVisited === false && !defaultNotAllowedNodes.includes(node.value)
+      );
+    }
+    return node.isVisited === false && defaultAllowedNodes.includes;
+  });
 };
 
 const randomlyProvideNeighbors = (
@@ -115,7 +128,7 @@ const randomlyProvideNeighbors = (
 export const createGrid = (
   rawGrid: IRawGrid,
   startNode: IPosition | undefined,
-  endNode?: IPosition | undefined,
+  endNode?: IPosition | undefined
 ): IGrid => {
   if (!startNode) return [];
   const grid: IGrid = [];
@@ -157,7 +170,10 @@ export const createBombGrid = (
   const numberOfRow = rawGrid.length;
   const numberOfCol = rawGrid[0].length;
   const bombsAreaMap = getBombAffectedAreaMap(bombNodes, playerBombPower);
-  const startbombsAreaMap = getBombAffectedAreaMap([startNode], playerBombPower);
+  const startbombsAreaMap = getBombAffectedAreaMap(
+    [startNode],
+    playerBombPower
+  );
   for (let rowIndex = 0; rowIndex < numberOfRow; rowIndex++) {
     grid[rowIndex] = [];
     for (let colIndex = 0; colIndex < numberOfCol; colIndex++) {
@@ -167,23 +183,72 @@ export const createBombGrid = (
           : false;
       const isBombAffectedNode =
         bombNodes?.length > 0
-          ? bombsAreaMap[rowIndex.toString()] && bombsAreaMap[rowIndex.toString()].includes(colIndex)
+          ? bombsAreaMap[rowIndex.toString()] &&
+            bombsAreaMap[rowIndex.toString()].includes(colIndex)
           : false;
-      const isStartBombAffectedNode = startbombsAreaMap[rowIndex.toString()] && startbombsAreaMap[rowIndex.toString()].includes(colIndex)
+      const isStartBombAffectedNode =
+        startbombsAreaMap[rowIndex.toString()] &&
+        startbombsAreaMap[rowIndex.toString()].includes(colIndex);
       let value = null;
       if (CANNOT_GO_NODE.includes(rawGrid[rowIndex][colIndex])) {
         value = rawGrid[rowIndex][colIndex];
       } else {
-        value = isStartBombAffectedNode ? START_BOMB_AFFECTED_NODE : (isBombAffectedNode ? BOMB_AFFECTED_NODE : rawGrid[rowIndex][colIndex]);
+        value = isStartBombAffectedNode
+          ? START_BOMB_AFFECTED_NODE
+          : isBombAffectedNode
+          ? BOMB_AFFECTED_NODE
+          : rawGrid[rowIndex][colIndex];
       }
-      grid[rowIndex].push(
-        createNode(
-          rowIndex,
-          colIndex,
-          value,
-          isStart
-        )
-      );
+      grid[rowIndex].push(createNode(rowIndex, colIndex, value, isStart));
+    }
+  }
+  return grid;
+};
+
+export const createBombGridV2 = (
+  rawGrid: IRawGrid,
+  startNode: IPosition | undefined,
+  bombs: IBomb[],
+  players: IPlayer[]
+): IGrid => {
+  if (!startNode) return [];
+  const grid: IGrid = [];
+  const numberOfRow = rawGrid.length;
+  const numberOfCol = rawGrid[0].length;
+  const bombsWithPower = getMappedBombWithPower(bombs, players);
+  const myPlacedBombWithPower = bombsWithPower.find((b) => {b.playerId === PLAYER_ID && b.col === startNode.col && b.row === startNode.row});
+  const bombsAreaMap = getBombAffectedAreaMapV2(bombsWithPower);
+  const myPlayer = players.find(p => p.id === PLAYER_ID);
+  if (!myPlayer || !myPlacedBombWithPower) return [];
+  const startbombsAreaMap = getBombAffectedAreaMapV2(
+    [myPlacedBombWithPower]
+  );
+  for (let rowIndex = 0; rowIndex < numberOfRow; rowIndex++) {
+    grid[rowIndex] = [];
+    for (let colIndex = 0; colIndex < numberOfCol; colIndex++) {
+      const isStart =
+        startNode && rowIndex == startNode.row && colIndex == startNode.col
+          ? true
+          : false;
+      const isBombAffectedNode =
+          bombs?.length > 0
+          ? bombsAreaMap[rowIndex.toString()] &&
+            bombsAreaMap[rowIndex.toString()].includes(colIndex)
+          : false;
+      const isStartBombAffectedNode =
+        startbombsAreaMap[rowIndex.toString()] &&
+        startbombsAreaMap[rowIndex.toString()].includes(colIndex);
+      let value = null;
+      if (CANNOT_GO_NODE.includes(rawGrid[rowIndex][colIndex])) {
+        value = rawGrid[rowIndex][colIndex];
+      } else {
+        value = isStartBombAffectedNode
+          ? START_BOMB_AFFECTED_NODE
+          : isBombAffectedNode
+          ? BOMB_AFFECTED_NODE
+          : rawGrid[rowIndex][colIndex];
+      }
+      grid[rowIndex].push(createNode(rowIndex, colIndex, value, isStart));
     }
   }
   return grid;
@@ -224,7 +289,7 @@ export const getStartNodeFromGrid = (grid: IGrid) => {
 
 export const getShortestPath = (destinationNode: INode | null) => {
   let shortestPathInOrder = [];
-  while (destinationNode != null) {
+  while (destinationNode?.previousNode != null) {
     destinationNode.isShortestPathNode = true;
     shortestPathInOrder.unshift(destinationNode);
     destinationNode = destinationNode.previousNode;
@@ -232,27 +297,96 @@ export const getShortestPath = (destinationNode: INode | null) => {
   return shortestPathInOrder;
 };
 
-export const findTheNearestPositionOfNode = (rawGrid: IRawGrid, startPosition: IPosition, nodeValue: TNodeValue): IPosition | null => {
+export const findTheNearestPositionOfNode = (
+  rawGrid: IRawGrid,
+  startPosition: IPosition,
+  nodeValue: TNodeValue
+): IPosition | null => {
   const nodeGrid = createGrid(rawGrid, startPosition);
   const inOrderVisitedArray = breadthFirstSearch(nodeGrid, [nodeValue]);
   const destinationNode = getDestinationNode(inOrderVisitedArray);
-  if (!destinationNode) return null
+  if (!destinationNode) return null;
   return {
     row: destinationNode.row,
     col: destinationNode.col,
-  }
-}
+  };
+};
 
-export const getBombAffectedAreaMap = (bombsPositions: IPosition[], power: number) => {
-  const bombsAreaMap: { [key: string] : number[]} = {}
+export const getBombAffectedPositions = (
+  bomb: IBombWithPower
+): IPosition[] => {
+  let bombPositions: IPosition[] = [{ row: bomb.row, col: bomb.col }];
+  for (let i = 1; i < bomb.power + 1; i++) {
+    bombPositions = [
+      ...bombPositions,
+      { row: bomb.row - i, col: bomb.col },
+      { row: bomb.row + i, col: bomb.col },
+      { row: bomb.row, col: bomb.col + i},
+      { row: bomb.row, col: bomb.col - i },
+    ];
+  }
+  return bombPositions;
+};
+
+export const getBombAffectedAreaMap = (
+  bombsPositions: IPosition[],
+  power: number
+) => {
+  const bombsAreaMap: { [key: string]: number[] } = {};
   for (let i = 0; i < bombsPositions.length; i++) {
-    bombsAreaMap[bombsPositions[i].row] = [...(bombsAreaMap[bombsPositions[i].row] ?? []), bombsPositions[i].col];
+    bombsAreaMap[bombsPositions[i].row] = [
+      ...(bombsAreaMap[bombsPositions[i].row] ?? []),
+      bombsPositions[i].col,
+    ];
     for (let j = 1; j < power + 1; j++) {
-      bombsAreaMap[bombsPositions[i].row - j] = [...(bombsAreaMap[bombsPositions[i].row - j ] ?? []), bombsPositions[i].col];
-      bombsAreaMap[bombsPositions[i].row + j] = [...(bombsAreaMap[bombsPositions[i].row + j] ?? []), bombsPositions[i].col];
-      bombsAreaMap[bombsPositions[i].row] = [...(bombsAreaMap[bombsPositions[i].row] ?? []), bombsPositions[i].col + j];
-      bombsAreaMap[bombsPositions[i].row] = [...(bombsAreaMap[bombsPositions[i].row] ?? []), bombsPositions[i].col - j];
+      bombsAreaMap[bombsPositions[i].row - j] = [
+        ...(bombsAreaMap[bombsPositions[i].row - j] ?? []),
+        bombsPositions[i].col,
+      ];
+      bombsAreaMap[bombsPositions[i].row + j] = [
+        ...(bombsAreaMap[bombsPositions[i].row + j] ?? []),
+        bombsPositions[i].col,
+      ];
+      bombsAreaMap[bombsPositions[i].row] = [
+        ...(bombsAreaMap[bombsPositions[i].row] ?? []),
+        bombsPositions[i].col + j,
+      ];
+      bombsAreaMap[bombsPositions[i].row] = [
+        ...(bombsAreaMap[bombsPositions[i].row] ?? []),
+        bombsPositions[i].col - j,
+      ];
     }
   }
   return bombsAreaMap;
-}
+};
+
+export const getBombAffectedAreaMapV2 = (
+  bombsWithPower: IBombWithPower[]
+) => {
+  const bombsAreaMap: { [key: string]: number[] } = {};
+  for (let i = 0; i < bombsWithPower.length; i++) {
+    bombsAreaMap[bombsWithPower[i].row] = [
+      ...(bombsAreaMap[bombsWithPower[i].row] ?? []),
+      bombsWithPower[i].col,
+    ];
+    for (let j = 1; j < bombsWithPower[i].power + 1; j++) {
+      bombsAreaMap[bombsWithPower[i].row - j] = [
+        ...(bombsAreaMap[bombsWithPower[i].row - j] ?? []),
+        bombsWithPower[i].col,
+      ];
+      bombsAreaMap[bombsWithPower[i].row + j] = [
+        ...(bombsAreaMap[bombsWithPower[i].row + j] ?? []),
+        bombsWithPower[i].col,
+      ];
+      bombsAreaMap[bombsWithPower[i].row] = [
+        ...(bombsAreaMap[bombsWithPower[i].row] ?? []),
+        bombsWithPower[i].col + j,
+      ];
+      bombsAreaMap[bombsWithPower[i].row] = [
+        ...(bombsAreaMap[bombsWithPower[i].row] ?? []),
+        bombsWithPower[i].col - j,
+      ];
+    }
+  }
+  return bombsAreaMap;
+};

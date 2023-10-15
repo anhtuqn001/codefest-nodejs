@@ -41,10 +41,19 @@ export interface IBomb extends IPosition {
   playerId: string;
 }
 
+export interface IBombWithPower extends IBomb {
+  power: number;
+}
+
+export interface ISpoil extends IPosition {
+  spoil_type: number;
+}
+
 export interface IMapInfo {
   map: IRawGrid;
   bombs: IBomb[];
   players: IPlayer[];
+  spoils: ISpoil[];
 }
 
 export interface IPlayer {
