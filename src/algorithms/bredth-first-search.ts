@@ -1,15 +1,16 @@
-import { getDestinationNode, getMappedBombWithPower } from ".";
+import { getCoordinateComboKey, getDestinationNode, getMappedBombWithPower } from ".";
 import {
   BOMB_AFFECTED_NODE,
   CANNOT_GO_NODE,
   EGG_NODE,
+  NODE_SPOIL_TYPE_MAPPING,
   NORMAL_NODE,
   PLAYER_ID,
   START_BOMB_AFFECTED_NODE,
   STONE_NODE,
   WOOD_NODE,
 } from "../constants";
-import { IBomb, IBombWithPower, IGrid, INode, IPlayer, IPosition, IRawGrid, TNodeValue } from "../types/node";
+import { IBomb, IBombWithPower, IGrid, INode, IPlayer, IPosition, IRawGrid, ISpoil, TNodeValue } from "../types/node";
 
 export const breadthFirstSearch = (
   grid: IGrid,
@@ -87,7 +88,7 @@ const getUnvisitedNeighbors = (
         node.isVisited === false && !defaultNotAllowedNodes.includes(node.value)
       );
     }
-    return node.isVisited === false && defaultAllowedNodes.includes;
+    return node.isVisited === false && defaultAllowedNodes.includes(node.value);
   });
 };
 
@@ -128,12 +129,17 @@ const randomlyProvideNeighbors = (
 export const createGrid = (
   rawGrid: IRawGrid,
   startNode: IPosition | undefined,
-  endNode?: IPosition | undefined
+  spoils: ISpoil[],
+  endNode?: IPosition | undefined,
 ): IGrid => {
   if (!startNode) return [];
   const grid: IGrid = [];
   const numberOfRow = rawGrid.length;
   const numberOfCol = rawGrid[0].length;
+  const keyValueSpoils: { [key: string]: number } = {};
+  spoils.forEach((spoil) => {
+    keyValueSpoils[getCoordinateComboKey(spoil.row, spoil.col)] = spoil.spoil_type;
+  });
   for (let rowIndex = 0; rowIndex < numberOfRow; rowIndex++) {
     grid[rowIndex] = [];
     for (let colIndex = 0; colIndex < numberOfCol; colIndex++) {
@@ -145,11 +151,12 @@ export const createGrid = (
         endNode && rowIndex == endNode.row && colIndex == endNode.col
           ? true
           : false;
+      const value = keyValueSpoils[getCoordinateComboKey(rowIndex, colIndex)] ? NODE_SPOIL_TYPE_MAPPING[keyValueSpoils[getCoordinateComboKey(rowIndex, colIndex)].toString()] : rawGrid[rowIndex][colIndex];
       grid[rowIndex].push(
         createNode(
           rowIndex,
           colIndex,
-          rawGrid[rowIndex][colIndex],
+          value,
           isStart,
           isDestination
         )
@@ -209,14 +216,19 @@ export const createBombGridV2 = (
   rawGrid: IRawGrid,
   startNode: IPosition | undefined,
   bombs: IBomb[],
-  players: IPlayer[]
+  players: IPlayer[],
+  spoils: ISpoil[]
 ): IGrid => {
   if (!startNode) return [];
   const grid: IGrid = [];
   const numberOfRow = rawGrid.length;
   const numberOfCol = rawGrid[0].length;
+  const keyValueSpoils: { [key: string]: number } = {};
+  spoils.forEach((spoil) => {
+    keyValueSpoils[getCoordinateComboKey(spoil.row, spoil.col)] = spoil.spoil_type;
+  });
   const bombsWithPower = getMappedBombWithPower(bombs, players);
-  const myPlacedBombWithPower = bombsWithPower.find((b) => {b.playerId === PLAYER_ID && b.col === startNode.col && b.row === startNode.row});
+  const myPlacedBombWithPower = bombsWithPower.find((b) => b.playerId === PLAYER_ID && b.col === startNode.col && b.row === startNode.row);
   const bombsAreaMap = getBombAffectedAreaMapV2(bombsWithPower);
   const myPlayer = players.find(p => p.id === PLAYER_ID);
   if (!myPlayer || !myPlacedBombWithPower) return [];
@@ -247,6 +259,9 @@ export const createBombGridV2 = (
           : isBombAffectedNode
           ? BOMB_AFFECTED_NODE
           : rawGrid[rowIndex][colIndex];
+      }
+      if (keyValueSpoils[getCoordinateComboKey(rowIndex, colIndex)]) {
+        value = NODE_SPOIL_TYPE_MAPPING[keyValueSpoils[getCoordinateComboKey(rowIndex, colIndex)].toString()];
       }
       grid[rowIndex].push(createNode(rowIndex, colIndex, value, isStart));
     }
@@ -295,21 +310,6 @@ export const getShortestPath = (destinationNode: INode | null) => {
     destinationNode = destinationNode.previousNode;
   }
   return shortestPathInOrder;
-};
-
-export const findTheNearestPositionOfNode = (
-  rawGrid: IRawGrid,
-  startPosition: IPosition,
-  nodeValue: TNodeValue
-): IPosition | null => {
-  const nodeGrid = createGrid(rawGrid, startPosition);
-  const inOrderVisitedArray = breadthFirstSearch(nodeGrid, [nodeValue]);
-  const destinationNode = getDestinationNode(inOrderVisitedArray);
-  if (!destinationNode) return null;
-  return {
-    row: destinationNode.row,
-    col: destinationNode.col,
-  };
 };
 
 export const getBombAffectedPositions = (

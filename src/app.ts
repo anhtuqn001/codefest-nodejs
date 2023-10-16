@@ -22,6 +22,7 @@ import {
   IPlayer,
   IRawGrid,
   ISpoil,
+  ITag,
   TNodeValue,
 } from "./types/node";
 import { BehaviorSubject, delay, of } from "rxjs";
@@ -48,7 +49,17 @@ app.get("/", function (req, res) {
 });
 
 app.post("/:action", function (req, res) {
-  socket.emit("drive player", { direction: req?.params?.action });
+  // socket.emit("drive player", { direction: req?.params?.action });
+  if (req?.params?.action === 'v') {
+    mainTaskStackSubject.next({
+      action: IMainStackAction.ADD,
+      params: {
+        taskName: "place-bomb-task"
+      }
+    })
+  } else {
+    socket.emit("drive player", { direction: req?.params?.action });
+  }
   res.send('success');
 });
 
@@ -64,6 +75,7 @@ export const globalSubject = new BehaviorSubject<IMapInfo>({
   bombs: [],
   players: [],
   spoils: [],
+  tag: ''
 });
 
 export const mainTaskStackSubject = new BehaviorSubject<{
@@ -117,6 +129,12 @@ mainTaskStackSubject.next({
     target: EGG_NODE,
   },
 });
+// mainTaskStackSubject.next({
+//   action: IMainStackAction.ADD,
+//   params: {
+//     taskName: "place-bomb-task"
+//   }
+// })
 // collectItemAdviserSubject.subscribe(collectItemAdviser);
 socket.on("connect", () => {
   // console.log("[Socket] connected to server");
@@ -149,16 +167,19 @@ socket.on("ticktack player", (res) => {
   const bombs: IBomb[] = res?.map_info?.bombs ?? [];
   const players: IPlayer[] = res.map_info?.players ?? [];
   const spoils: ISpoil[] = res.map_info?.spoils ?? [];
+  const tag: ITag = res?.tag;
   // const player = getPlayer(res.map_info.players);
   if (res?.map_info) {
     globalSubject.next({
       map,
       bombs,
       players,
-      spoils
+      spoils,
+      tag
     });
-  }  
-
+  }
+  // console.log('tag', tag);
+  // console.log('mainTaskStack', mainTaskStack.getAllTasks());
   mainTaskStackSubject.next({
     action: IMainStackAction.DO,
   });
@@ -169,12 +190,12 @@ socket.on("ticktack player", (res) => {
 
 //API-3b
 socket.on("drive player", (res) => {
-  // console.log("[Socket] drive-player responsed, res: ", res);
-  // if (res.direction.includes('b')) {
-  //   of("1")
-  //   .pipe(delay(2300)).subscribe(() => {
-  //     // collectItemAdviserSubject.next(null);
-  //     collectItemAdviser()
-  //   })
-  // }
+  console.log("[Socket] drive-player responsed, res: ", res);
+  if (res.direction.includes('b')) {
+    of("1")
+    .pipe(delay(2300)).subscribe(() => {
+      // collectItemAdviserSubject.next(null);
+      collectItemAdviser()
+    })
+  }
 });

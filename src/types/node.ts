@@ -21,7 +21,11 @@ export enum TNodeValue {
   WOOD_NODE = 2,
   EGG_NODE = 5,
   BOMB_AFFECTED_NODE = 10,
-  START_BOMB_AFFECTED_NODE = 11
+  START_BOMB_AFFECTED_NODE = 11,
+  MYS_EGG_NODE = 6,
+  SPEED_EGG_NODE = 3,
+  POWER_EGG_NODE = 4,
+  DELAY_EGG_NODE = 7
 }
 
 export interface IPosition {
@@ -54,8 +58,10 @@ export interface IMapInfo {
   bombs: IBomb[];
   players: IPlayer[];
   spoils: ISpoil[];
+  tag: ITag;
 }
 
+export type ITag = string;
 export interface IPlayer {
     id: string;
     currentPosition: IPosition;

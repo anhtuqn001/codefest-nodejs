@@ -19,9 +19,10 @@ import {
 import {
   breadthFirstSearch,
   createBombGrid,
+  createBombGridV2,
   getShortestPath,
 } from "../algorithms/bredth-first-search";
-import { BOMB_AFFECTED_NODE, NORMAL_NODE, START_BOMB_AFFECTED_NODE } from "../constants";
+import { BOMB_AFFECTED_NODE, DELAY_EGG_NODE, MYS_EGG_NODE, NORMAL_NODE, POWER_EGG_NODE, SPEED_EGG_NODE, START_BOMB_AFFECTED_NODE } from "../constants";
 
 export default class PlaceBombTask extends BaseTask {
   name = "place-bomb-task";
@@ -32,6 +33,7 @@ export default class PlaceBombTask extends BaseTask {
   constructor(globalSubject: IGloBalSubject) {
     super(globalSubject);
     this.thiz = this;
+    this.isNoneStopTask = true;
   }
 
   startTask = () => {
@@ -44,11 +46,12 @@ export default class PlaceBombTask extends BaseTask {
 
   findTheSafePlace = (
     startPosition: IPosition,
-    { map: rawGrid, bombs, players }: IMapInfo,
+    { map, bombs, players, spoils }: IMapInfo,
     player: IPlayer
   ) => {
-    const startNode = getStartNode(rawGrid, startPosition);
-    const nodeGrid = createBombGrid(rawGrid, startNode, bombs, player.power);
+    const startNode = getStartNode(map, startPosition);
+    const nodeGrid = createBombGridV2(map, startNode, bombs, players, spoils);
+    console.log('nodeGrid', nodeGrid.flat().map(node => node.value).filter(value => [POWER_EGG_NODE, SPEED_EGG_NODE, MYS_EGG_NODE,DELAY_EGG_NODE].includes(value)));
     const inOrderVisitedArray = breadthFirstSearch(
       nodeGrid,
       [NORMAL_NODE, START_BOMB_AFFECTED_NODE],
@@ -96,6 +99,8 @@ export default class PlaceBombTask extends BaseTask {
         { col: this.bombPlaced.col, row: this.bombPlaced.row },
         shortestPath
       );
+      console.log('place-bom: startPosition', this.bombPlaced.row + "|" + this.bombPlaced.col);
+      console.log('place-bom: shortestPath', shortestPath.map(s => s.row + "|" + s.col));
       stringPath = stringPath + stringPathToShortestPath;
       socket.emit("drive player", { direction: stringPath });
       this.safePlace = shortestPath[shortestPath.length - 1];

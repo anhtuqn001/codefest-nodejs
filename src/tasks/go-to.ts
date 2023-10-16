@@ -1,9 +1,9 @@
 import { getDestinationNode, getEndNode, getPlayer, getStartNode, getStringPathFromShortestPath } from "../algorithms";
-import { breadthFirstSearch, createGrid, findTheNearestPositionOfNode, getShortestPath } from "../algorithms/bredth-first-search";
+import { breadthFirstSearch, createGrid, getShortestPath } from "../algorithms/bredth-first-search";
 import { IGloBalSubject, IGrid, IMainStackAction, IMapInfo, IMovingOnAndPlaceBomb, INode, IPosition, IRawGrid, ITask, ITaskState, TNodeValue } from "../types/node";
 import { v4 as uuid } from "uuid";
 import BaseTask from "./base-task";
-import { EGG_NODE, STONE_NODE, WOOD_NODE } from "../constants";
+import { EGG_NODE, MYS_EGG_NODE, STONE_NODE, WOOD_NODE } from "../constants";
 import { mainTaskStackSubject, socket } from "../app";
 
 export default class GoToTask extends BaseTask {
@@ -27,7 +27,7 @@ export default class GoToTask extends BaseTask {
       if (this.taskState === ITaskState.NEW || this.taskState === ITaskState.PAUSED) {
         this.start(this.goToTaskObserver);
       }
-
+      
       if (this.taskState === ITaskState.RUNNING || this.taskState === ITaskState.STOPPED) return;
     }
     
@@ -47,7 +47,7 @@ export default class GoToTask extends BaseTask {
 
     goToTaskObserver = (mapInfo: IMapInfo) => {
       if (!mapInfo) return;
-      const { players, bombs, map } = mapInfo;
+      const { players, bombs, map, spoils, tag } = mapInfo;
       const player = getPlayer(players);
       if (!player) return;
       let emittedPlaceBomb = false;
@@ -65,12 +65,14 @@ export default class GoToTask extends BaseTask {
         }
         this.movingOn = undefined;
       }
+      console.log('go to: player.currentPosition', player.currentPosition);
       if (this.movingOn) return;
       if (emittedPlaceBomb) return;
-      const nodeGrid = createGrid(map, player.currentPosition);
+      const nodeGrid = createGrid(map, player.currentPosition, spoils);
       
-      const inOrderVisitedArray = breadthFirstSearch(nodeGrid, undefined, [STONE_NODE], [this.nodeValueNeedToGo ?? EGG_NODE]);
+      const inOrderVisitedArray = breadthFirstSearch(nodeGrid, undefined, [STONE_NODE, MYS_EGG_NODE], [this.nodeValueNeedToGo ?? EGG_NODE]);
       let destinationNode = getDestinationNode(inOrderVisitedArray);
+      // console.log('destinationNode', destinationNode?.row + "|" + destinationNode?.col);
       if (this.comeToNextToPosition && destinationNode) {
         destinationNode = destinationNode.previousNode;
       }
@@ -79,7 +81,11 @@ export default class GoToTask extends BaseTask {
       if (shortestPath[shortestPath.length - 1] !== destinationNode) {
         tempDestinationNode = shortestPath[shortestPath.length - 1];
       }
+      console.log('go to: shortestPath', shortestPath.map(node => node?.row + "|" + node?.col))
       const stringPathToShortestPath = getStringPathFromShortestPath(player.currentPosition, shortestPath);
+        setTimeout(() => {
+          console.log('go to: stringPathToShortestPath', stringPathToShortestPath);
+        }, 20-0)
         socket.emit("drive player", { direction: stringPathToShortestPath });
         // emit place boom 
         if (tempDestinationNode) {

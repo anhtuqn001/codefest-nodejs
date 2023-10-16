@@ -10,6 +10,7 @@ export default class BaseTask implements ITask {
     subscription: Subscription | undefined = undefined;
     taskState: ITaskState = ITaskState.NEW;
     thiz: BaseTask | null = this;
+    isNoneStopTask: boolean = false;
     constructor(globalSubject: IGloBalSubject) {
         this.id = uuid();
         this.thiz = this;

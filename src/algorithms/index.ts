@@ -178,14 +178,14 @@ export const getItemPlayerAreaRawGrid = (rawGrid: IRawGrid, playerPosition: IPos
   return rawGrid;
 }
 
-export const getBombItemPlayerAreaRawGrid = (rawGrid: IRawGrid, playerPosition: IPosition, spoils: ISpoil[], bombs: IBombWithPower[]) => {
-  let spoilsConvertedForm: {[key: string]: number} = {};
+export const getBombItemPlayerAreaRawGrid = (rawGrid: IRawGrid, playerPosition: IPosition, bombs: IBombWithPower[]) => {
+  // let spoilsConvertedForm: {[key: string]: number} = {};
   let bombsConvertedForm: {[key: string]: number} = {};
-  for (let i = 0; i < spoils.length; i++) {
-    const spoilRow = spoils[i].row;
-    const spoilCol = spoils[i].col;
-    spoilsConvertedForm[spoilRow.toString() + spoilCol.toString()] = spoils[i].spoil_type;
-  }
+  // for (let i = 0; i < spoils.length; i++) {
+  //   const spoilRow = spoils[i].row;
+  //   const spoilCol = spoils[i].col;
+  //   spoilsConvertedForm[spoilRow.toString() + spoilCol.toString()] = spoils[i].spoil_type;
+  // }
   for (let i = 0; i < bombs.length; i++) {
     const bomb = bombs[i];
     const bombAcffectedPositions = getBombAffectedPositions(bomb);
@@ -198,9 +198,9 @@ export const getBombItemPlayerAreaRawGrid = (rawGrid: IRawGrid, playerPosition: 
       if (Math.abs(playerPosition.row - i) > NEAR_BY_PLAYER_AREA_LAYER || Math.abs(playerPosition.col - j) > NEAR_BY_PLAYER_AREA_LAYER) {
         rawGrid[i][j] = STONE_NODE;
       } else {
-        if (spoilsConvertedForm[i.toString() + j.toString()]) {
-          rawGrid[i][j] = NODE_SPOIL_TYPE_MAPPING[spoilsConvertedForm[i.toString() + j.toString()].toString()]
-        }
+        // if (spoilsConvertedForm[i.toString() + j.toString()]) {
+        //   rawGrid[i][j] = NODE_SPOIL_TYPE_MAPPING[spoilsConvertedForm[i.toString() + j.toString()].toString()]
+        // }
         if (bombsConvertedForm[i.toString() + j.toString()]) {
           rawGrid[i][j] = BOMB_AFFECTED_NODE;
         }
@@ -208,4 +208,6 @@ export const getBombItemPlayerAreaRawGrid = (rawGrid: IRawGrid, playerPosition: 
     }   
   }
   return rawGrid;
-} 
+}
+
+export const getCoordinateComboKey = (row: number, col: number): string => row + '|' + col;

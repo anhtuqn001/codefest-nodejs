@@ -1,7 +1,7 @@
 import { getBombItemPlayerAreaRawGrid, getDestinationNode, getMappedBombWithPower, getPlayer, getStringPathFromShortestPath } from "../algorithms";
 import { breadthFirstSearch, createGrid, getShortestPath } from "../algorithms/bredth-first-search";
 import { socket } from "../app";
-import { CANNOT_GO_NODE, GOOD_EGG_NODES, MYS_EGG_NODE } from "../constants";
+import { CANNOT_GO_NODE, EGG_NODE, GOOD_EGG_NODES, MYS_EGG_NODE } from "../constants";
 import { IGloBalSubject, IGrid, IMapInfo, INode, IPosition, ITaskState } from "../types/node";
 import BaseTask from "./base-task";
 
@@ -42,18 +42,21 @@ export default class CollectItemTask extends BaseTask {
     }
 
     collectItemTaskObserver = (mapInfo: IMapInfo) => {
+        console.log('collect');
         if(!mapInfo) return;
         const { players, bombs, spoils, map } = mapInfo
         const player = getPlayer(players);
         if (!player) return;
+
         const bombsWithPower = getMappedBombWithPower(bombs, players);
-        const playerAreaGrid = getBombItemPlayerAreaRawGrid(map, player.currentPosition, spoils, bombsWithPower);
-        const playerAreaGridNode = createGrid(playerAreaGrid, player.currentPosition);
-        const itemsToCollect = playerAreaGrid.flat().filter(value => GOOD_EGG_NODES.includes(value));
+        const playerAreaGrid = getBombItemPlayerAreaRawGrid(map, player.currentPosition, bombsWithPower);
+        const playerAreaGridNode = createGrid(playerAreaGrid, player.currentPosition, spoils);
+        const itemsToCollect = playerAreaGridNode.flat().filter(node => GOOD_EGG_NODES.includes(node.value));
+        
         let previousDestinationNode: INode | null = null;
         let shortestPath: INode[] = [];
         for (let i = 0; i <= itemsToCollect.length - 1; i++) {
-          const inOrderVisitedArray = breadthFirstSearch(playerAreaGridNode, undefined, [...CANNOT_GO_NODE, MYS_EGG_NODE], GOOD_EGG_NODES);
+          const inOrderVisitedArray = breadthFirstSearch(playerAreaGridNode, undefined, CANNOT_GO_NODE, GOOD_EGG_NODES);
           let destinationNode = getDestinationNode(inOrderVisitedArray);
           if (destinationNode?.isDestination) {
             previousDestinationNode = destinationNode;
@@ -63,19 +66,27 @@ export default class CollectItemTask extends BaseTask {
             break;
           }
         }
-        if (shortestPath?.length > 0) {
-          const destination = shortestPath[shortestPath.length - 1];
-          this.movingOn = { row: destination.row, col: destination.col };
+        if (!this.movingOn) {
+          console.log('collect: player: currentPosition', player.currentPosition);
+          if (shortestPath?.length > 0) {
+            const destination = shortestPath[shortestPath.length - 1];
+            this.movingOn = { row: destination.row, col: destination.col };
+          } else {
+            this.stop(this.id);
+            return;
+          }
+          console.log('collect: shortestPath', shortestPath.map(node => node?.row + "|" + node?.col))
+          const stringPathToShortestPath = getStringPathFromShortestPath(player.currentPosition, shortestPath);
+          console.log('collect: stringPathToShortestPath', stringPathToShortestPath);
+          socket.emit("drive player", { direction: stringPathToShortestPath });
         }
-        const stringPathToShortestPath = getStringPathFromShortestPath(player.currentPosition, shortestPath);
-        socket.emit("drive player", { direction: stringPathToShortestPath });
         if (this.movingOn) {
           if (this.movingOn.col === player.currentPosition.col && this.movingOn.row === player.currentPosition.row) {
-            this.movingOn = undefined;
+            setTimeout(() => {
+              this.movingOn = undefined;
+              this.stop(this.id)
+            }, 50);
           }
-        } 
-        if (!this.movingOn) {
-          this.stop(this.id);
         }
     }
 }
