@@ -151,6 +151,10 @@ export default class DestroyWoodTask extends BaseTask {
     }
     const landSeaRawGrid = getLandSeaRawGrid(map);
     const bestLand = getBestLand(landSeaRawGrid);
+    if (!bestLand) {
+      this.stop(this.id);
+      return;
+    }
     if (!this.bestLand) {
       this.bestLand = bestLand;
     }

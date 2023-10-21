@@ -267,7 +267,10 @@ export const getBombItemPlayerAreaRawGrid = (
 export const getCoordinateComboKey = (row: number, col: number): string =>
   row + "|" + col;
 
-export const getLandSeaRawGrid = (rawGrid: IRawGrid): IRawGrid => {
+export const getLandSeaRawGrid = (rawGrid: IRawGrid, acceptableNodeLevel = 4): IRawGrid => {
+  if (acceptableNodeLevel === 0) {
+    return rawGrid.map(r => Array(r.length).fill(0))
+  }
   const cloneRawGrid = rawGrid.map((r) => [...r]);
   for (let i = 0; i < cloneRawGrid.length; i++) {
     for (let j = 0; j < cloneRawGrid[i].length; j++) {
@@ -275,21 +278,24 @@ export const getLandSeaRawGrid = (rawGrid: IRawGrid): IRawGrid => {
         cloneRawGrid[i][j] = calculateWoodNodeScore(rawGrid, {
           row: i,
           col: j,
-        });
+        }, acceptableNodeLevel);
       } else {
         cloneRawGrid[i][j] = 0;
       }
     }
   }
-
+  if (!cloneRawGrid.flat().some(value => value === acceptableNodeLevel)) {
+    return getLandSeaRawGrid(rawGrid, acceptableNodeLevel - 1);
+  }
   return cloneRawGrid;
 };
 
 export const calculateWoodNodeScore = (
   grid: IRawGrid,
-  woodPosition: IPosition
+  woodPosition: IPosition,
+  acceptableNodeLevel: number
 ) => {
-  let score = 0;
+  let score = 1;
   if (
     grid[woodPosition.row] &&
     grid[woodPosition.row][woodPosition.col + 1] === WOOD_NODE
@@ -314,13 +320,13 @@ export const calculateWoodNodeScore = (
   ) {
     score += 1;
   }
-  if (score <= 2) {
+  if (score < acceptableNodeLevel) {
     return 0;
   }
   return score;
 };
 
-export const getBestLand = (landSeaRawGrid: IRawGrid): {[key: string]: Array<string>} => {
+export const getBestLand = (landSeaRawGrid: IRawGrid): {[key: string]: Array<string>} | null => {
   if (!landSeaRawGrid) return {};
   const landSeaGrid = createLandSeaGrid(landSeaRawGrid);
   let landsObject: {[key: string]: string[]} = {}
@@ -342,9 +348,11 @@ export const getBestLand = (landSeaRawGrid: IRawGrid): {[key: string]: Array<str
       }
     }
   }
+  console.log('landsObject', landsObject);
   const totals = Object.keys(landsObject);
   const totalsInDesOrder = totals.sort((a: string, b: string) => parseInt(b) - parseInt(a));
-  const highestLand = landsObject[totalsInDesOrder[0]]
+  const highestLand = landsObject[totalsInDesOrder[0]];
+  if (!highestLand) return null;
   return Object.assign({}, ...(highestLand.map(item => ({ [item]: item.split("|") }))));
 };
 
