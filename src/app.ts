@@ -20,6 +20,7 @@ import {
   IMapInfo,
   INode,
   IPlayer,
+  IPosition,
   IRawGrid,
   ISpoil,
   ITag,
@@ -32,6 +33,10 @@ import MainTaskStack from "./state/main-task-stack";
 import { collectItemAdviser, collectItemAdviserSubject } from "./advisers/collect-item-adviser";
 import bodyParser from "body-parser";
 import CollectItemTask from "./tasks/collect-item";
+import DestroyWoodTask from "./tasks/destroy-wood";
+import collideAdviser from "./advisers/collide-opponent-adviser";
+import destroywoodAdviser from "./advisers/destroy-wood-adviser";
+import GoToAndPlaceBombTask from "./tasks/go-to-and-place-boom";
 
 const targetServer = "http://localhost";
 
@@ -54,9 +59,9 @@ app.post("/:action", function (req, res) {
     mainTaskStackSubject.next({
       action: IMainStackAction.ADD,
       params: {
-        taskName: "place-bomb-task"
-      }
-    })
+        taskName: "destroy-wood",
+      },
+    });
   } else {
     socket.emit("drive player", { direction: req?.params?.action });
   }
@@ -70,6 +75,8 @@ server.listen(port, () => {
 });
 export const socket = ioc(targetServer);
 
+export const mainTaskStack = new MainTaskStack();
+
 export const globalSubject = new BehaviorSubject<IMapInfo>({
   map: [],
   bombs: [],
@@ -78,15 +85,29 @@ export const globalSubject = new BehaviorSubject<IMapInfo>({
   tag: ''
 });
 
+export const advisersSubject = new BehaviorSubject<IMapInfo>({
+  map: [],
+  bombs: [],
+  players: [],
+  spoils: [],
+  tag: ''
+});
+
+advisersSubject.subscribe(collideAdviser);
+advisersSubject.subscribe(destroywoodAdviser);
+
 export const mainTaskStackSubject = new BehaviorSubject<{
   action: IMainStackAction;
   params?: {
     taskName?: string;
-    target?: TNodeValue;
+    target?: TNodeValue[] | IPosition[];
+    singleTarget?: IPosition;
+    comeToNextToPosition?: boolean;
     taskId?: string;
   };
 } | null>(null);
 
+mainTaskStackSubject.subscribe()
 
 mainTaskStackSubject.subscribe((mainStackBehavior) => {
   if (mainStackBehavior) {
@@ -95,13 +116,19 @@ mainTaskStackSubject.subscribe((mainStackBehavior) => {
       case IMainStackAction.ADD:
         let task = null;
         if (params?.taskName === "go-to") {
-          task = new GoToTask(globalSubject, params.target, true);
+          task = new GoToTask(globalSubject, params.target, params.comeToNextToPosition ?? false);
         }
         if (params?.taskName === "place-bomb-task") {
           task = new PlaceBombTask(globalSubject);
         }
         if(params?.taskName === "collect-item") {
           task = new CollectItemTask(globalSubject);
+        }
+        if(params?.taskName === "destroy-wood") {
+          task = new DestroyWoodTask(globalSubject);
+        }
+        if(params?.taskName === "go-to-and-place-bomb" && params.singleTarget) {
+          task = new GoToAndPlaceBombTask(globalSubject, params.singleTarget);
         }
         if (task) {
           mainTaskStack.addNewTask(task);
@@ -117,18 +144,28 @@ mainTaskStackSubject.subscribe((mainStackBehavior) => {
         }
         break;
       }
+      case IMainStackAction.COLLIDED: {
+        mainTaskStack.onCollide();
+        break;
+      }
     }
   }
 });
 
-const mainTaskStack = new MainTaskStack();
-mainTaskStackSubject.next({
-  action: IMainStackAction.ADD,
-  params: {
-    taskName: "go-to",
-    target: EGG_NODE,
-  },
-});
+
+// mainTaskStackSubject.next({
+//   action: IMainStackAction.ADD,
+//   params: {
+//     taskName: "destroy-wood"
+//   }
+// })
+// mainTaskStackSubject.next({
+//   action: IMainStackAction.ADD,
+//   params: {
+//     taskName: "go-to",
+//     target: EGG_NODE,
+//   },
+// });
 // mainTaskStackSubject.next({
 //   action: IMainStackAction.ADD,
 //   params: {
@@ -168,7 +205,7 @@ socket.on("ticktack player", (res) => {
   const players: IPlayer[] = res.map_info?.players ?? [];
   const spoils: ISpoil[] = res.map_info?.spoils ?? [];
   const tag: ITag = res?.tag;
-  // const player = getPlayer(res.map_info.players);
+  // console.log('tag', tag);
   if (res?.map_info) {
     globalSubject.next({
       map,
@@ -177,9 +214,16 @@ socket.on("ticktack player", (res) => {
       spoils,
       tag
     });
+    advisersSubject.next({
+      map,
+      bombs,
+      players,
+      spoils,
+      tag
+    })
   }
-  // console.log('tag', tag);
-  // console.log('mainTaskStack', mainTaskStack.getAllTasks());
+  const player = getPlayer(players);
+  console.log('mainTaskStack', mainTaskStack.getAllTasks().map(t => t.name));
   mainTaskStackSubject.next({
     action: IMainStackAction.DO,
   });
@@ -190,12 +234,14 @@ socket.on("ticktack player", (res) => {
 
 //API-3b
 socket.on("drive player", (res) => {
-  console.log("[Socket] drive-player responsed, res: ", res);
-  if (res.direction.includes('b')) {
-    of("1")
-    .pipe(delay(2300)).subscribe(() => {
-      // collectItemAdviserSubject.next(null);
-      collectItemAdviser()
-    })
-  }
+  // console.log("[Socket] drive-player responsed, res: ", res);
+  const tasks = mainTaskStack.getAllTasks();
+
+  // if (res.direction.includes('b') && res.player_id === PLAYER_ID && !tasks.some(t => t.name === 'collect-item')) {
+  //   of("1")
+  //   .pipe(delay(2300)).subscribe(() => {
+  //     // collectItemAdviserSubject.next(null);
+  //     collectItemAdviser()
+  //   })
+  // }
 });

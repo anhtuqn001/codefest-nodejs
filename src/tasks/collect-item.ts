@@ -37,12 +37,11 @@ export default class CollectItemTask extends BaseTask {
         gridNode[previousDestinationNode.row][previousDestinationNode.col].isVisited = true;
         gridNode[previousDestinationNode.row][previousDestinationNode.col].isStart = true;
         gridNode[previousDestinationNode.row][previousDestinationNode.col].value = 0;
-        previousDestinationNode.previousNode = null;
+        previousDestinationNode.previousNode = undefined;
       }
     }
 
     collectItemTaskObserver = (mapInfo: IMapInfo) => {
-        console.log('collect');
         if(!mapInfo) return;
         const { players, bombs, spoils, map } = mapInfo
         const player = getPlayer(players);
@@ -50,7 +49,7 @@ export default class CollectItemTask extends BaseTask {
 
         const bombsWithPower = getMappedBombWithPower(bombs, players);
         const playerAreaGrid = getBombItemPlayerAreaRawGrid(map, player.currentPosition, bombsWithPower);
-        const playerAreaGridNode = createGrid(playerAreaGrid, player.currentPosition, spoils);
+        const playerAreaGridNode = createGrid(playerAreaGrid, player.currentPosition, spoils, bombs, players);
         const itemsToCollect = playerAreaGridNode.flat().filter(node => GOOD_EGG_NODES.includes(node.value));
         
         let previousDestinationNode: INode | null = null;
@@ -67,7 +66,6 @@ export default class CollectItemTask extends BaseTask {
           }
         }
         if (!this.movingOn) {
-          console.log('collect: player: currentPosition', player.currentPosition);
           if (shortestPath?.length > 0) {
             const destination = shortestPath[shortestPath.length - 1];
             this.movingOn = { row: destination.row, col: destination.col };
@@ -75,9 +73,7 @@ export default class CollectItemTask extends BaseTask {
             this.stop(this.id);
             return;
           }
-          console.log('collect: shortestPath', shortestPath.map(node => node?.row + "|" + node?.col))
           const stringPathToShortestPath = getStringPathFromShortestPath(player.currentPosition, shortestPath);
-          console.log('collect: stringPathToShortestPath', stringPathToShortestPath);
           socket.emit("drive player", { direction: stringPathToShortestPath });
         }
         if (this.movingOn) {
@@ -85,7 +81,7 @@ export default class CollectItemTask extends BaseTask {
             setTimeout(() => {
               this.movingOn = undefined;
               this.stop(this.id)
-            }, 50);
+            }, 20);
           }
         }
     }

@@ -7,10 +7,11 @@ export interface INode {
   col: number;
   isStart: boolean;
   isVisited: boolean;
-  previousNode: INode | null;
+  previousNode: INode | undefined;
   distance: number;
   isShortestPathNode: boolean;
   isDestination: boolean;
+  score?: number
 }
 
 export type IGrid = Array<Array<INode>>;
@@ -25,7 +26,8 @@ export enum TNodeValue {
   MYS_EGG_NODE = 6,
   SPEED_EGG_NODE = 3,
   POWER_EGG_NODE = 4,
-  DELAY_EGG_NODE = 7
+  DELAY_EGG_NODE = 7,
+  OPPONENT_NODE = 12
 }
 
 export interface IPosition {
@@ -99,9 +101,12 @@ export enum ITaskState {
 export enum IMainStackAction {
   ADD = 0,
   DONE = 1,
-  DO = 2
+  DO = 2,
+  COLLIDED = 3
 }
 
 export interface IMovingOnAndPlaceBomb extends IPosition {
   shouldPlaceBomb: boolean;
 }
+
+export type IBestLandType = {[key: string]: Array<string>}

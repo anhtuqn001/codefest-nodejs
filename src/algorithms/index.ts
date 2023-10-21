@@ -1,10 +1,43 @@
-import { BOMB_AFFECTED_NODE, EGG_NODE, NEAR_BY_PLAYER_AREA_LAYER, NODE_SPOIL_TYPE_MAPPING, PLAYER_ID, PRISON_NODE, STONE_NODE } from "../constants";
-import { IBomb, IBombWithPower, INode, IPlayer, IPosition, IRawGrid, ISpoil } from "../types/node";
-import { createNode, getBombAffectedPositions } from "./bredth-first-search";
+import {
+  BOMB_AFFECTED_NODE,
+  EGG_NODE,
+  NEAR_BY_PLAYER_AREA_LAYER,
+  NODE_SPOIL_TYPE_MAPPING,
+  PLAYER_ID,
+  PRISON_NODE,
+  STONE_NODE,
+  WOOD_NODE,
+} from "../constants";
+import {
+  IBestLandType,
+  IBomb,
+  IBombWithPower,
+  INode,
+  IPlayer,
+  IPosition,
+  IRawGrid,
+  ISpoil,
+} from "../types/node";
+import {
+  breadthFirstSearch,
+  createGrid,
+  createLandSeaGrid,
+  createNode,
+  getBombAffectedAreaMapV2,
+  getBombAffectedPositions,
+} from "./bredth-first-search";
 
 export const getPlayer = (players: IPlayer[]): IPlayer | undefined => {
   for (let i = 0; i < players.length; i++) {
     if (players[i].id === PLAYER_ID) {
+      return players[i];
+    }
+  }
+};
+
+export const getOpponent = (players: IPlayer[]): IPlayer | undefined => {
+  for (let i = 0; i < players.length; i++) {
+    if (players[i].id !== PLAYER_ID) {
       return players[i];
     }
   }
@@ -41,7 +74,7 @@ export const getDestinationNode = (inOrderVisitedList: INode[]) => {
       return inOrderVisitedList[i];
     }
   }
-  return null;
+  return undefined;
 };
 
 export const getBombAffectedPosition = (
@@ -71,7 +104,7 @@ export const getBombAffectedPosition = (
       {
         col: bombs[i].col,
         row: bombs[i].row - bomLength,
-      }
+      },
     ];
   }
   return bombPositions;
@@ -91,9 +124,9 @@ export const getStringPathFromShortestPath = (
     ) {
       stringPath = stringPath + "1";
       currentPosition = {
-          col: shortestPath[i].col,
-          row: shortestPath[i].row
-        }
+        col: shortestPath[i].col,
+        row: shortestPath[i].row,
+      };
       continue;
     }
     if (
@@ -102,9 +135,9 @@ export const getStringPathFromShortestPath = (
     ) {
       stringPath = stringPath + "2";
       currentPosition = {
-          col: shortestPath[i].col,
-          row: shortestPath[i].row
-        }
+        col: shortestPath[i].col,
+        row: shortestPath[i].row,
+      };
       continue;
     }
     if (
@@ -113,9 +146,9 @@ export const getStringPathFromShortestPath = (
     ) {
       stringPath = stringPath + "4";
       currentPosition = {
-          col: shortestPath[i].col,
-          row: shortestPath[i].row
-        }
+        col: shortestPath[i].col,
+        row: shortestPath[i].row,
+      };
       continue;
     }
     if (
@@ -124,63 +157,81 @@ export const getStringPathFromShortestPath = (
     ) {
       stringPath = stringPath + "3";
       currentPosition = {
-          col: shortestPath[i].col,
-          row: shortestPath[i].row
-        }
+        col: shortestPath[i].col,
+        row: shortestPath[i].row,
+      };
       continue;
     }
     currentPosition = {
       col: shortestPath[i].col,
-      row: shortestPath[i].row
-    }
+      row: shortestPath[i].row,
+    };
   }
   return stringPath;
-}
+};
 
-export const getMappedBombWithPower = (bombs: IBomb[], players: IPlayer[]): IBombWithPower[] => {
-  return bombs.map(b => {
-    const player = players.find(p => p.id === b.playerId);
+export const getMappedBombWithPower = (
+  bombs: IBomb[],
+  players: IPlayer[]
+): IBombWithPower[] => {
+  return bombs.map((b) => {
+    const player = players.find((p) => p.id === b.playerId);
     if (player?.power) {
       return {
         ...b,
-        power: player.power
-      }
+        power: player.power,
+      };
     }
     return {
       ...b,
-      power: 1
+      power: 1,
     };
-  })
-}
+  });
+};
 
-export const getItemPlayerAreaRawGrid = (rawGrid: IRawGrid, playerPosition: IPosition, spoils: ISpoil[]) => {
-  let spoilsConvertedForm: {[key: string]: number} = {};
+export const getItemPlayerAreaRawGrid = (
+  rawGrid: IRawGrid,
+  playerPosition: IPosition,
+  spoils: ISpoil[]
+) => {
+  let spoilsConvertedForm: { [key: string]: number } = {};
   for (let i = 0; i < spoils.length; i++) {
     const spoilRow = spoils[i].row;
     const spoilCol = spoils[i].col;
-    spoilsConvertedForm[spoilRow.toString() + '|' + spoilCol.toString()] = spoils[i].spoil_type;
+    spoilsConvertedForm[spoilRow.toString() + "|" + spoilCol.toString()] =
+      spoils[i].spoil_type;
   }
-  
+
   for (let i = 0; i < rawGrid.length; i++) {
-    for(let j = 0; j < rawGrid[i].length; j++) {
-      if (Math.abs(playerPosition.row - i) > NEAR_BY_PLAYER_AREA_LAYER || Math.abs(playerPosition.col - j) > NEAR_BY_PLAYER_AREA_LAYER) {
+    for (let j = 0; j < rawGrid[i].length; j++) {
+      if (
+        Math.abs(playerPosition.row - i) > NEAR_BY_PLAYER_AREA_LAYER ||
+        Math.abs(playerPosition.col - j) > NEAR_BY_PLAYER_AREA_LAYER
+      ) {
         rawGrid[i][j] = STONE_NODE;
       } else {
         if (rawGrid[i][j] === PRISON_NODE) {
           rawGrid[i][j] = STONE_NODE;
         }
-        if (spoilsConvertedForm[i.toString() + '|' + j.toString()]) {
-          rawGrid[i][j] = NODE_SPOIL_TYPE_MAPPING[spoilsConvertedForm[i.toString() + '|' + j.toString()].toString()]
+        if (spoilsConvertedForm[i.toString() + "|" + j.toString()]) {
+          rawGrid[i][j] =
+            NODE_SPOIL_TYPE_MAPPING[
+              spoilsConvertedForm[i.toString() + "|" + j.toString()].toString()
+            ];
         }
       }
-    }   
+    }
   }
   return rawGrid;
-}
+};
 
-export const getBombItemPlayerAreaRawGrid = (rawGrid: IRawGrid, playerPosition: IPosition, bombs: IBombWithPower[]) => {
+export const getBombItemPlayerAreaRawGrid = (
+  rawGrid: IRawGrid,
+  playerPosition: IPosition,
+  bombs: IBombWithPower[]
+) => {
   // let spoilsConvertedForm: {[key: string]: number} = {};
-  let bombsConvertedForm: {[key: string]: number} = {};
+  let bombsConvertedForm: { [key: string]: number } = {};
   // for (let i = 0; i < spoils.length; i++) {
   //   const spoilRow = spoils[i].row;
   //   const spoilCol = spoils[i].col;
@@ -191,11 +242,14 @@ export const getBombItemPlayerAreaRawGrid = (rawGrid: IRawGrid, playerPosition: 
     const bombAcffectedPositions = getBombAffectedPositions(bomb);
     bombAcffectedPositions.forEach((p) => {
       bombsConvertedForm[p.toString() + p.toString()] = BOMB_AFFECTED_NODE;
-    })
+    });
   }
   for (let i = 0; i < rawGrid.length; i++) {
-    for(let j = 0; j < rawGrid[i].length; j++) {
-      if (Math.abs(playerPosition.row - i) > NEAR_BY_PLAYER_AREA_LAYER || Math.abs(playerPosition.col - j) > NEAR_BY_PLAYER_AREA_LAYER) {
+    for (let j = 0; j < rawGrid[i].length; j++) {
+      if (
+        Math.abs(playerPosition.row - i) > NEAR_BY_PLAYER_AREA_LAYER ||
+        Math.abs(playerPosition.col - j) > NEAR_BY_PLAYER_AREA_LAYER
+      ) {
         rawGrid[i][j] = STONE_NODE;
       } else {
         // if (spoilsConvertedForm[i.toString() + j.toString()]) {
@@ -205,9 +259,110 @@ export const getBombItemPlayerAreaRawGrid = (rawGrid: IRawGrid, playerPosition: 
           rawGrid[i][j] = BOMB_AFFECTED_NODE;
         }
       }
-    }   
+    }
   }
   return rawGrid;
+};
+
+export const getCoordinateComboKey = (row: number, col: number): string =>
+  row + "|" + col;
+
+export const getLandSeaRawGrid = (rawGrid: IRawGrid): IRawGrid => {
+  const cloneRawGrid = rawGrid.map((r) => [...r]);
+  for (let i = 0; i < cloneRawGrid.length; i++) {
+    for (let j = 0; j < cloneRawGrid[i].length; j++) {
+      if (rawGrid[i][j] === WOOD_NODE) {
+        cloneRawGrid[i][j] = calculateWoodNodeScore(rawGrid, {
+          row: i,
+          col: j,
+        });
+      } else {
+        cloneRawGrid[i][j] = 0;
+      }
+    }
+  }
+
+  return cloneRawGrid;
+};
+
+export const calculateWoodNodeScore = (
+  grid: IRawGrid,
+  woodPosition: IPosition
+) => {
+  let score = 0;
+  if (
+    grid[woodPosition.row] &&
+    grid[woodPosition.row][woodPosition.col + 1] === WOOD_NODE
+  ) {
+    score += 1;
+  }
+  if (
+    grid[woodPosition.row] &&
+    grid[woodPosition.row][woodPosition.col - 1] === WOOD_NODE
+  ) {
+    score += 1;
+  }
+  if (
+    grid[woodPosition.row - 1] &&
+    grid[woodPosition.row - 1][woodPosition.col] === WOOD_NODE
+  ) {
+    score += 1;
+  }
+  if (
+    grid[woodPosition.row + 1] &&
+    grid[woodPosition.row + 1][woodPosition.col] === WOOD_NODE
+  ) {
+    score += 1;
+  }
+  if (score <= 2) {
+    return 0;
+  }
+  return score;
+};
+
+export const getBestLand = (landSeaRawGrid: IRawGrid): {[key: string]: Array<string>} => {
+  if (!landSeaRawGrid) return {};
+  const landSeaGrid = createLandSeaGrid(landSeaRawGrid);
+  let landsObject: {[key: string]: string[]} = {}
+  for (let i = 0; i < landSeaGrid.length; i++) {
+    for (let j = 0; j < landSeaGrid[i].length; j++) {
+      if (!landSeaGrid[i][j].isVisited && landSeaGrid[i][j].value !== 0) {
+        landSeaGrid[i][j].isStart = true;
+        const inOrderVisitedArray = breadthFirstSearch(landSeaGrid, undefined, [
+          0,
+        ]);
+        landSeaGrid[i][j].isStart = false;
+        const total = inOrderVisitedArray.reduce((total: number, node: INode) => {
+          return total + node.value
+        }, 0)
+        landsObject = {
+          ...landsObject,
+          [total]: inOrderVisitedArray.map(node => getCoordinateComboKey(node.row, node.col))
+        }
+      }
+    }
+  }
+  const totals = Object.keys(landsObject);
+  const totalsInDesOrder = totals.sort((a: string, b: string) => parseInt(b) - parseInt(a));
+  const highestLand = landsObject[totalsInDesOrder[0]]
+  return Object.assign({}, ...(highestLand.map(item => ({ [item]: item.split("|") }))));
+};
+
+export const findNearestPositionOfBestLand = (bestLand: IBestLandType, player: IPlayer | undefined): IPosition | null => {
+  if (!player) return null;
+  return null;
+  
 }
 
-export const getCoordinateComboKey = (row: number, col: number): string => row + '|' + col;
+export const isPlayerIsInDangerousArea = (players: IPlayer[], bombs: IBomb[], nodeGrid: INode[][]): boolean => {
+  const player = getPlayer(players);
+  const bombsWithPower = getMappedBombWithPower(bombs, players);
+  const bombsAreaMap = getBombAffectedAreaMapV2(bombsWithPower, nodeGrid.length, nodeGrid[0].length)
+  if (!player || bombs?.length === 0) return false;
+  if (bombsAreaMap) {
+    if (bombsAreaMap[player.currentPosition.row.toString()] && bombsAreaMap[player.currentPosition.row.toString()].includes(player.currentPosition.col)) {
+      return true;
+    }
+  }
+  return false
+} 
