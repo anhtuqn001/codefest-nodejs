@@ -12,6 +12,7 @@ import {
   IBestLandType,
   IBomb,
   IBombWithPower,
+  IDragonEggGST,
   INode,
   IPlayer,
   IPosition,
@@ -326,7 +327,7 @@ export const calculateWoodNodeScore = (
   return score;
 };
 
-export const getBestLand = (landSeaRawGrid: IRawGrid): {[key: string]: Array<string>} | null => {
+export const getBestLand = (landSeaRawGrid: IRawGrid): {[key: string]: Array<string>} | undefined => {
   if (!landSeaRawGrid) return {};
   const landSeaGrid = createLandSeaGrid(landSeaRawGrid);
   let landsObject: {[key: string]: string[]} = {}
@@ -348,11 +349,10 @@ export const getBestLand = (landSeaRawGrid: IRawGrid): {[key: string]: Array<str
       }
     }
   }
-  console.log('landsObject', landsObject);
   const totals = Object.keys(landsObject);
   const totalsInDesOrder = totals.sort((a: string, b: string) => parseInt(b) - parseInt(a));
   const highestLand = landsObject[totalsInDesOrder[0]];
-  if (!highestLand) return null;
+  if (!highestLand) return undefined;
   return Object.assign({}, ...(highestLand.map(item => ({ [item]: item.split("|") }))));
 };
 
@@ -374,3 +374,7 @@ export const isPlayerIsInDangerousArea = (players: IPlayer[], bombs: IBomb[], no
   }
   return false
 } 
+
+export const findTargetGSTEgg = (dragonEggGSTArray: IDragonEggGST[]) => {
+  return dragonEggGSTArray.find(e => e.id !== PLAYER_ID);
+}

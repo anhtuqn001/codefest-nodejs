@@ -10,11 +10,12 @@ import {
   getShortestPath,
 } from "../algorithms/bredth-first-search";
 import { mainTaskStackSubject, socket } from "../app";
-import { CAN_GO_NODES, NORMAL_NODE } from "../constants";
+import { CAN_GO_NODES, GOOD_EGG_NODES, NORMAL_NODE, POWER_EGG_NODE } from "../constants";
 import {
   IGloBalSubject,
   IMainStackAction,
   IMapInfo,
+  INode,
   IPlayer,
   IPosition,
   ITaskState,
@@ -23,8 +24,8 @@ import BaseTask from "./base-task";
 
 export default class GoToAndPlaceBombTask extends BaseTask {
   thiz: GoToAndPlaceBombTask = this;
-  destinationPosition: IPosition | undefined = undefined;
-  constructor(globalSubject: IGloBalSubject, destinationPosition?: IPosition) {
+  destinationPosition: INode | undefined = undefined;
+  constructor(globalSubject: IGloBalSubject, destinationPosition?: INode) {
     super(globalSubject);
     this.thiz = this;
     this.name = "go-to-and-place-bomb";
@@ -95,6 +96,10 @@ export default class GoToAndPlaceBombTask extends BaseTask {
       player.currentPosition.col === this.destinationPosition?.col &&
       player.currentPosition.row === this.destinationPosition?.row
     ) {
+      if (this.destinationPosition.score === 1 && GOOD_EGG_NODES.includes(this.destinationPosition.value)) {
+        this.stop(this.id);
+        return;
+      }
       mainTaskStackSubject.next({
         action: IMainStackAction.ADD,
         params: {
@@ -102,6 +107,7 @@ export default class GoToAndPlaceBombTask extends BaseTask {
         },
       });
       this.stop(this.id);
+      return;
     }
     const nodeGrid = createGrid(
       map,
@@ -120,9 +126,9 @@ export default class GoToAndPlaceBombTask extends BaseTask {
 
     let destinationNode = getDestinationNode(inOrderVisitedArray);
     if (!destinationNode) {
-      if (isPlayerIsInDangerousArea(players, bombs, nodeGrid)) {
-        this.escapeFromBomb(player, mapInfo);
-      }
+      // if (isPlayerIsInDangerousArea(players, bombs, nodeGrid)) {
+      //   this.escapeFromBomb(player, mapInfo);
+      // }
       this.stop(this.id);
       return;
     }

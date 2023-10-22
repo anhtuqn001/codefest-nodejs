@@ -5,8 +5,9 @@ import { IMainStackAction, IMapInfo } from "../types/node";
 
 const destroywoodAdviser = ({ map }: IMapInfo) => {
   const allTasks = mainTaskStack.getAllTasks();
-  const isThereWoodNode = map.flat().some((n) => n === WOOD_NODE);
-  if (allTasks?.length === 0 && isThereWoodNode) {
+  // const isThereManyWoodNode = map.flat().some((n) => n === WOOD_NODE);
+  const isThereManyWoodNode = map.flat().filter(n => n === WOOD_NODE).length > 10
+  if (allTasks?.length === 0 && isThereManyWoodNode) {
     mainTaskStack.addNewTask(new DestroyWoodTask(globalSubject));
   }
 };

@@ -7,11 +7,15 @@ import {
 import {
   BOMB_AFFECTED_NODE,
   CANNOT_GO_NODE,
+  CAN_GO_NODES,
+  DELAY_EGG_NODE,
   EGG_NODE,
   NODE_SPOIL_TYPE_MAPPING,
   NORMAL_NODE,
   OPPONENT_NODE,
   PLAYER_ID,
+  POWER_EGG_NODE,
+  SPEED_EGG_NODE,
   START_BOMB_AFFECTED_NODE,
   STONE_NODE,
   WOOD_NODE,
@@ -20,6 +24,7 @@ import {
   IBestLandType,
   IBomb,
   IBombWithPower,
+  IDragonEggGST,
   IGrid,
   INode,
   IPlayer,
@@ -205,7 +210,7 @@ export const createGrid = (
   spoils: ISpoil[],
   bombs: IBomb[],
   players: IPlayer[],
-  endNode?: IPosition | undefined,
+  endNode?: IPosition | undefined
 ): IGrid => {
   if (!startNode) return [];
   const grid: IGrid = [];
@@ -213,7 +218,11 @@ export const createGrid = (
   const numberOfCol = rawGrid[0].length;
   const opponent = getOpponent(players);
   const bombsWithPower = getMappedBombWithPower(bombs, players);
-  const bombsAreaMap = getBombAffectedAreaMapV2(bombsWithPower, numberOfRow, numberOfCol);
+  const bombsAreaMap = getBombAffectedAreaMapV2(
+    bombsWithPower,
+    numberOfRow,
+    numberOfCol
+  );
   const keyValueSpoils: { [key: string]: number } = {};
   spoils?.forEach((spoil) => {
     keyValueSpoils[getCoordinateComboKey(spoil.row, spoil.col)] =
@@ -235,10 +244,16 @@ export const createGrid = (
             keyValueSpoils[getCoordinateComboKey(rowIndex, colIndex)].toString()
           ]
         : rawGrid[rowIndex][colIndex];
-      if (bombsAreaMap[rowIndex.toString()] && bombsAreaMap[rowIndex.toString()].includes(colIndex)) {
-        value = BOMB_AFFECTED_NODE
+      if (
+        bombsAreaMap[rowIndex.toString()] &&
+        bombsAreaMap[rowIndex.toString()].includes(colIndex)
+      ) {
+        value = BOMB_AFFECTED_NODE;
       }
-      if (opponent?.currentPosition.row === rowIndex && opponent?.currentPosition.col === colIndex) {
+      if (
+        opponent?.currentPosition.row === rowIndex &&
+        opponent?.currentPosition.col === colIndex
+      ) {
         value = OPPONENT_NODE;
       }
       grid[rowIndex].push(
@@ -256,7 +271,7 @@ export const createGridForPlaceBomb = (
   bombs: IBomb[],
   players: IPlayer[],
   myBomb: IPosition,
-  endNode?: IPosition | undefined,
+  endNode?: IPosition | undefined
 ): IGrid => {
   if (!startNode) return [];
   const grid: IGrid = [];
@@ -264,7 +279,11 @@ export const createGridForPlaceBomb = (
   const numberOfCol = rawGrid[0].length;
   const opponent = getOpponent(players);
   const bombsWithPower = getMappedBombWithPower(bombs, players);
-  const bombsAreaMap = getBombAffectedAreaMapV2(bombsWithPower.filter(b => b.col !== myBomb.col || b.row !== myBomb.row), numberOfRow, numberOfCol);
+  const bombsAreaMap = getBombAffectedAreaMapV2(
+    bombsWithPower.filter((b) => b.col !== myBomb.col || b.row !== myBomb.row),
+    numberOfRow,
+    numberOfCol
+  );
   const keyValueSpoils: { [key: string]: number } = {};
   spoils?.forEach((spoil) => {
     keyValueSpoils[getCoordinateComboKey(spoil.row, spoil.col)] =
@@ -286,10 +305,16 @@ export const createGridForPlaceBomb = (
             keyValueSpoils[getCoordinateComboKey(rowIndex, colIndex)].toString()
           ]
         : rawGrid[rowIndex][colIndex];
-      if (bombsAreaMap[rowIndex.toString()] && bombsAreaMap[rowIndex.toString()].includes(colIndex)) {
-        value = BOMB_AFFECTED_NODE
+      if (
+        bombsAreaMap[rowIndex.toString()] &&
+        bombsAreaMap[rowIndex.toString()].includes(colIndex)
+      ) {
+        value = BOMB_AFFECTED_NODE;
       }
-      if (opponent?.currentPosition.row === rowIndex && opponent?.currentPosition.col === colIndex) {
+      if (
+        opponent?.currentPosition.row === rowIndex &&
+        opponent?.currentPosition.col === colIndex
+      ) {
         value = OPPONENT_NODE;
       }
       grid[rowIndex].push(
@@ -369,11 +394,19 @@ export const createBombGridV2 = (
       b.col === startNode.col &&
       b.row === startNode.row
   );
-  const bombsAreaMap = getBombAffectedAreaMapV2(bombsWithPower, numberOfRow, numberOfCol);
+  const bombsAreaMap = getBombAffectedAreaMapV2(
+    bombsWithPower,
+    numberOfRow,
+    numberOfCol
+  );
   const myPlayer = players.find((p) => p.id === PLAYER_ID);
   const opponent = getOpponent(players);
   if (!myPlayer || !myPlacedBombWithPower) return [];
-  const startbombsAreaMap = getBombAffectedAreaMapV2([myPlacedBombWithPower], numberOfRow, numberOfCol);
+  const startbombsAreaMap = getBombAffectedAreaMapV2(
+    [myPlacedBombWithPower],
+    numberOfRow,
+    numberOfCol
+  );
   for (let rowIndex = 0; rowIndex < numberOfRow; rowIndex++) {
     grid[rowIndex] = [];
     for (let colIndex = 0; colIndex < numberOfCol; colIndex++) {
@@ -405,7 +438,10 @@ export const createBombGridV2 = (
             keyValueSpoils[getCoordinateComboKey(rowIndex, colIndex)].toString()
           ];
       }
-      if (opponent?.currentPosition?.row === rowIndex && opponent?.currentPosition?.col === colIndex) {
+      if (
+        opponent?.currentPosition?.row === rowIndex &&
+        opponent?.currentPosition?.col === colIndex
+      ) {
         value = OPPONENT_NODE;
       }
       grid[rowIndex].push(createNode(rowIndex, colIndex, value, isStart));
@@ -446,7 +482,11 @@ export const createDestroyWoodGrid = (
       spoil.spoil_type;
   });
   const bombsWithPower = getMappedBombWithPower(bombs, players);
-  const bombsAreaMap = getBombAffectedAreaMapV2(bombsWithPower, numberOfRow, numberOfCol);
+  const bombsAreaMap = getBombAffectedAreaMapV2(
+    bombsWithPower,
+    numberOfRow,
+    numberOfCol
+  );
   for (let rowIndex = 0; rowIndex < numberOfRow; rowIndex++) {
     grid[rowIndex] = [];
     for (let colIndex = 0; colIndex < numberOfCol; colIndex++) {
@@ -459,10 +499,12 @@ export const createDestroyWoodGrid = (
           ? bombsAreaMap[rowIndex.toString()] &&
             bombsAreaMap[rowIndex.toString()].includes(colIndex)
           : false;
-      let value = null;
-      value = isBombAffectedNode
-        ? BOMB_AFFECTED_NODE
-        : rawGrid[rowIndex][colIndex];
+      let value = rawGrid[rowIndex][colIndex];
+      if (CAN_GO_NODES.includes(value)) {
+        value = isBombAffectedNode
+          ? BOMB_AFFECTED_NODE
+          : rawGrid[rowIndex][colIndex];
+      }
       if (keyValueSpoils[getCoordinateComboKey(rowIndex, colIndex)]) {
         value =
           NODE_SPOIL_TYPE_MAPPING[
@@ -473,13 +515,12 @@ export const createDestroyWoodGrid = (
         if (
           bestLand[getCoordinateComboKey(rowIndex, colIndex)] ||
           bestLand[getCoordinateComboKey(rowIndex + 1, colIndex)] ||
-          bestLand[getCoordinateComboKey(rowIndex - 1, colIndex)] || 
+          bestLand[getCoordinateComboKey(rowIndex - 1, colIndex)] ||
           bestLand[getCoordinateComboKey(rowIndex, colIndex - 1)] ||
           bestLand[getCoordinateComboKey(rowIndex, colIndex + 1)]
         ) {
-
         } else {
-          value = STONE_NODE
+          value = STONE_NODE;
         }
       }
       grid[rowIndex].push(createNode(rowIndex, colIndex, value, isStart));
@@ -506,7 +547,7 @@ export const createNode = (
   previousNode: undefined,
   distance: Infinity,
   isShortestPathNode: false,
-  score: 0
+  score: 0,
 });
 
 export const getStartNodeFromGrid = (grid: IGrid) => {
@@ -578,7 +619,11 @@ export const getBombAffectedAreaMap = (
   return bombsAreaMap;
 };
 
-export const getBombAffectedAreaMapV2 = (bombsWithPower: IBombWithPower[], maxRowNumber: number, maxColNumber: number) => {
+export const getBombAffectedAreaMapV2 = (
+  bombsWithPower: IBombWithPower[],
+  maxRowNumber: number,
+  maxColNumber: number
+) => {
   const bombsAreaMap: { [key: string]: number[] } = {};
   for (let i = 0; i < bombsWithPower.length; i++) {
     bombsAreaMap[bombsWithPower[i].row] = [
@@ -598,7 +643,7 @@ export const getBombAffectedAreaMapV2 = (bombsWithPower: IBombWithPower[], maxRo
           bombsWithPower[i].col,
         ];
       }
-      
+
       if (bombsWithPower[i].col + j < maxColNumber) {
         bombsAreaMap[bombsWithPower[i].row] = [
           ...(bombsAreaMap[bombsWithPower[i].row] ?? []),
@@ -611,7 +656,6 @@ export const getBombAffectedAreaMapV2 = (bombsWithPower: IBombWithPower[], maxRo
           bombsWithPower[i].col - j,
         ];
       }
-      
     }
   }
   return bombsAreaMap;
@@ -631,7 +675,7 @@ export const breadthFirstSearchWithScore = (
   grid: IGrid,
   playerPower: number,
   allowedNodes?: TNodeValue[],
-  notAllowedNodes?: TNodeValue[],
+  notAllowedNodes?: TNodeValue[]
 ): INode[] => {
   let queue: INode[] = [];
   let inOrderVisitedArray: INode[] = [];
@@ -640,7 +684,7 @@ export const breadthFirstSearchWithScore = (
   startNode.distance = 0;
   startNode.isVisited = true;
   queue.push(startNode);
-  calculateNodeScore(grid, startNode, playerPower)
+  calculateNodeScore(grid, startNode, playerPower);
   while (!!queue.length) {
     let neighbors = getUnvisitedNeighbors(
       queue[0],
@@ -655,6 +699,7 @@ export const breadthFirstSearchWithScore = (
     if (nodeToTraverse) {
       inOrderVisitedArray.push(nodeToTraverse);
     }
+
     if (!nodeToTraverse) continue;
     if (nodeToTraverse?.isDestination) return inOrderVisitedArray;
     // if (nodesToStop && nodesToStop.length > 0) {
@@ -679,54 +724,165 @@ export const breadthFirstSearchWithScore = (
   return inOrderVisitedArray;
 };
 
-const calculateNodeScore = (grid: IGrid, node: INode | undefined, playerPower: number) => {
+export const breadthFirstSearchToKillTarget = (
+  grid: IGrid,
+  playerPower: number,
+  target: IPosition,
+  allowedNodes?: TNodeValue[],
+  notAllowedNodes?: TNodeValue[]
+): INode[] => {
+  let queue: INode[] = [];
+  let inOrderVisitedArray: INode[] = [];
+  const startNode = getStartNodeFromGrid(grid);
+  if (!startNode || !playerPower) return [];
+  startNode.distance = 0;
+  startNode.isVisited = true;
+  queue.push(startNode);
+  calculateTargetAreaScore(grid, startNode, playerPower, target);
+  while (!!queue.length) {
+    let neighbors = getUnvisitedNeighbors(
+      queue[0],
+      grid,
+      allowedNodes,
+      notAllowedNodes
+    );
+    updateNeightborNodes(queue[0], neighbors);
+    queue = [...queue, ...neighbors];
+    let nodeToTraverse = queue.shift();
+    calculateTargetAreaScore(grid, nodeToTraverse, playerPower, target);
+    if (nodeToTraverse) {
+      inOrderVisitedArray.push(nodeToTraverse);
+    }
+
+    if (!nodeToTraverse) continue;
+    if (nodeToTraverse?.isDestination) return inOrderVisitedArray;
+    // if (nodesToStop && nodesToStop.length > 0) {
+    //   if (isValueNodes(nodesToStop)) {
+    //     if (nodesToStop.includes(nodeToTraverse?.value)) {
+    //       nodeToTraverse.isDestination = true;
+    //       return inOrderVisitedArray;
+    //     }
+    //   } else if (
+    //     isPositionNodes(nodesToStop) &&
+    //     nodesToStop.some(
+    //       (p) => p.row === nodeToTraverse?.row && p.col === nodeToTraverse?.col
+    //     )
+    //   ) {
+    //     nodeToTraverse.isDestination = true;
+    //     return inOrderVisitedArray;
+    //   }
+    // } else {
+    //   if (nodeToTraverse?.isDestination) return inOrderVisitedArray;
+    // }
+  }
+  return inOrderVisitedArray;
+};
+
+const calculateTargetAreaScore = (
+  grid: IGrid,
+  node: INode | undefined,
+  playerPower: number,
+  target: IPosition) => {
+  if (!node) return;
+  const { row, col } = node;
+  const { row: targetRow, col: targetCol } = target;
+  let score = 0;
+  for (let i = 1; i < playerPower + 1; i++) {
+    if (row === 10 && col === 23) {
+      console.log('targetRow - i > 0 && targetRow - i === row && targetCol === col', targetRow - i > 0 && targetRow - i === row && targetCol === col);
+    } 
+    if (targetRow - i > 0 && targetRow - i === row && targetCol === col) {
+        score++;
+        break;
+    }
+  }
+  for (let i = 1; i < playerPower + 1; i++) {
+    if (targetRow + i < grid.length - i && targetRow + i === row && col === targetCol) {
+      score++;
+        break;
+    }
+  }
+  for (let i = 1; i < playerPower + 1; i++) {
+    if (targetCol - i > 0 && targetCol - i === col && row === targetRow) {
+      score++;
+      break;
+    }
+  }
+  for (let i = 1; i < playerPower + 1; i++) {
+    if (targetCol + i < grid[0].length && targetCol + i === col && row === targetRow) {
+      score++;
+      break;
+    }
+  }
+  node.score = score;
+}
+
+const calculateNodeScore = (
+  grid: IGrid,
+  node: INode | undefined,
+  playerPower: number
+) => {
   if (!node) return;
   const { row, col } = node;
   let score = 0;
+  if ([POWER_EGG_NODE, DELAY_EGG_NODE, SPEED_EGG_NODE].includes(node.value)) {
+    score++;
+  }
   for (let i = 1; i < playerPower + 1; i++) {
     if (row - i > 0) {
-      if (grid[row - i][col].value === STONE_NODE || grid[row - i][col].value === EGG_NODE) {
+      if (
+        grid[row - i][col].value === STONE_NODE ||
+        grid[row - i][col].value === EGG_NODE
+      ) {
         break;
       }
       if (grid[row - i][col].value === WOOD_NODE) {
         score++;
         break;
       }
-    };
+    }
   }
   for (let i = 1; i < playerPower + 1; i++) {
     if (row < grid.length - i) {
-      if (grid[row + i][col].value === STONE_NODE || grid[row + i][col].value === EGG_NODE) {
+      if (
+        grid[row + i][col].value === STONE_NODE ||
+        grid[row + i][col].value === EGG_NODE
+      ) {
         break;
       }
       if (grid[row + i][col].value === WOOD_NODE) {
         score++;
         break;
       }
-    };
+    }
   }
   for (let i = 1; i < playerPower + 1; i++) {
     if (col - i > 0) {
-      if (grid[row][col - i].value === STONE_NODE || grid[row][col - i].value === EGG_NODE) {
+      if (
+        grid[row][col - i].value === STONE_NODE ||
+        grid[row][col - i].value === EGG_NODE
+      ) {
         break;
       }
       if (grid[row][col - i].value === WOOD_NODE) {
         score++;
         break;
       }
-    };
+    }
   }
   for (let i = 1; i < playerPower + 1; i++) {
-    if (col < grid[0].length - i && grid[row][col + i].value === WOOD_NODE) {
-      if (grid[row][col + i].value === STONE_NODE || grid[row][col + i].value === EGG_NODE) {
+    if (col < grid[0].length - i) {
+      if (
+        grid[row][col + i].value === STONE_NODE ||
+        grid[row][col + i].value === EGG_NODE
+      ) {
         break;
       }
       if (grid[row][col + i].value === WOOD_NODE) {
         score++;
         break;
       }
-      
-    };
+    }
   }
   node.score = score;
-}
+};

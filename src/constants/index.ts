@@ -13,7 +13,7 @@ export const PRISON_NODE = 4;
 export const OPPONENT_NODE = 12;
 
 
-export const GAME_ID = "3e909200-5ebb-4c53-934e-6b688ced536c";
+export const GAME_ID = "c99908ee-7513-41e6-8f5f-167e4847ec16";
 export const PLAYER_ID = "player1-xxx";
 
 export const CANNOT_GO_NODE = [STONE_NODE, WOOD_NODE, BOMB_AFFECTED_NODE, MYS_EGG_NODE, EGG_NODE, OPPONENT_NODE];

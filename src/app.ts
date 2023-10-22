@@ -15,6 +15,7 @@ import {
 } from "./algorithms/bredth-first-search";
 import {
   IBomb,
+  IDragonEggGST,
   IGloBalSubject,
   IMainStackAction,
   IMapInfo,
@@ -37,6 +38,8 @@ import DestroyWoodTask from "./tasks/destroy-wood";
 import collideAdviser from "./advisers/collide-opponent-adviser";
 import destroywoodAdviser from "./advisers/destroy-wood-adviser";
 import GoToAndPlaceBombTask from "./tasks/go-to-and-place-boom";
+import killTargetAdviser from "./advisers/kill-target-adviser";
+import KillTarget from "./tasks/kill-target";
 
 const targetServer = "http://localhost";
 
@@ -82,7 +85,8 @@ export const globalSubject = new BehaviorSubject<IMapInfo>({
   bombs: [],
   players: [],
   spoils: [],
-  tag: ''
+  tag: '',
+  dragonEggGSTArray: []
 });
 
 export const advisersSubject = new BehaviorSubject<IMapInfo>({
@@ -90,22 +94,25 @@ export const advisersSubject = new BehaviorSubject<IMapInfo>({
   bombs: [],
   players: [],
   spoils: [],
-  tag: ''
+  tag: '',
+  dragonEggGSTArray: []
 });
 
 advisersSubject.subscribe(collideAdviser);
 advisersSubject.subscribe(destroywoodAdviser);
+advisersSubject.subscribe(killTargetAdviser);
 
 export const mainTaskStackSubject = new BehaviorSubject<{
   action: IMainStackAction;
   params?: {
     taskName?: string;
     target?: TNodeValue[] | IPosition[];
-    singleTarget?: IPosition;
+    singleTarget?: INode;
     comeToNextToPosition?: boolean;
     taskId?: string;
   };
 } | null>(null);
+
 
 mainTaskStackSubject.subscribe()
 
@@ -130,6 +137,9 @@ mainTaskStackSubject.subscribe((mainStackBehavior) => {
         if(params?.taskName === "go-to-and-place-bomb" && params.singleTarget) {
           task = new GoToAndPlaceBombTask(globalSubject, params.singleTarget);
         }
+        if(params?.taskName === "kill-target") {
+          mainTaskStack.addNewTask(new KillTarget(globalSubject));
+        }
         if (task) {
           mainTaskStack.addNewTask(task);
         }
@@ -151,6 +161,10 @@ mainTaskStackSubject.subscribe((mainStackBehavior) => {
     }
   }
 });
+
+advisersSubject.subscribe(collideAdviser);
+advisersSubject.subscribe(destroywoodAdviser);
+advisersSubject.subscribe(killTargetAdviser);
 
 
 // mainTaskStackSubject.next({
@@ -205,24 +219,28 @@ socket.on("ticktack player", (res) => {
   const players: IPlayer[] = res.map_info?.players ?? [];
   const spoils: ISpoil[] = res.map_info?.spoils ?? [];
   const tag: ITag = res?.tag;
-  // console.log('tag', tag);
+  const dragonEggGSTArray: IDragonEggGST[] = res?.map_info?.dragonEggGSTArray;
+  console.log('res', res.map_info.dragonEggGSTArray);
   if (res?.map_info) {
     globalSubject.next({
       map,
       bombs,
       players,
       spoils,
-      tag
+      tag,
+      dragonEggGSTArray
     });
     advisersSubject.next({
       map,
       bombs,
       players,
       spoils,
-      tag
+      tag,
+      dragonEggGSTArray
     })
   }
   const player = getPlayer(players);
+  // console.log('tag', tag);
   console.log('mainTaskStack', mainTaskStack.getAllTasks().map(t => t.name));
   mainTaskStackSubject.next({
     action: IMainStackAction.DO,

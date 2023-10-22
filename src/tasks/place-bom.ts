@@ -79,8 +79,8 @@ export default class PlaceBombTask extends BaseTask {
     if (!this.bombPlaced && !bombs.find(b => b.col === startPosition?.col && b.col === startPosition.row)) {
       //place a bomb
       stringPath = stringPath + "b";
+
       this.bombPlaced = startPosition;
-      
       socket.emit("drive player", { direction: stringPath });
       return;
     }
@@ -142,9 +142,7 @@ export default class PlaceBombTask extends BaseTask {
         CAN_GO_NODES,
         undefined
       );
-      console.log(inOrderVisitedArray.map(node => node.row + "|" + node.col));
       let destinationNode = getDestinationNode(inOrderVisitedArray);
-      console.log('destinationNode', destinationNode?.row, destinationNode?.row, destinationNode?.value);
       const shortestPath = getShortestPath(destinationNode);
       const stringPathToShortestPath = getStringPathFromShortestPath(
         player.currentPosition,

@@ -61,6 +61,7 @@ export interface IMapInfo {
   players: IPlayer[];
   spoils: ISpoil[];
   tag: ITag;
+  dragonEggGSTArray: IDragonEggGST[];
 }
 
 export type ITag = string;
@@ -110,3 +111,7 @@ export interface IMovingOnAndPlaceBomb extends IPosition {
 }
 
 export type IBestLandType = {[key: string]: Array<string>}
+
+export interface IDragonEggGST extends IPosition {
+  id: string;
+}
