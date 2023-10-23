@@ -126,9 +126,10 @@ export default class GoToAndPlaceBombTask extends BaseTask {
 
     let destinationNode = getDestinationNode(inOrderVisitedArray);
     if (!destinationNode) {
-      // if (isPlayerIsInDangerousArea(players, bombs, nodeGrid)) {
-      //   this.escapeFromBomb(player, mapInfo);
-      // }
+      if (isPlayerIsInDangerousArea(players, bombs, nodeGrid)) {
+        console.log('escaped');
+        this.escapeFromBomb(player, mapInfo);
+      }
       this.stop(this.id);
       return;
     }

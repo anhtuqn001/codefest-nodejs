@@ -18,6 +18,7 @@ import {
   CAN_GO_NODES,
   DELAY_EGG_NODE,
   NORMAL_NODE,
+  PLAYER_ID,
   POWER_EGG_NODE,
   SPEED_EGG_NODE,
   STEP_BOMB_RATIO,
@@ -44,6 +45,7 @@ export default class DestroyWoodTask extends BaseTask {
   firstRendered: boolean = false;
   passedNodes: IBestLandType = {};
   lastDestinationNode: INode | undefined = undefined;
+  destinationNodeWithoutBomb: INode | undefined = undefined;
   constructor(globalSubject: IGloBalSubject) {
     super(globalSubject);
     this.thiz = this;
@@ -89,13 +91,26 @@ export default class DestroyWoodTask extends BaseTask {
   };
 
   destroyLand = (mapInfo: IMapInfo) => {
-    const { map, players, spoils, bombs } = mapInfo;
+    const { map, players, spoils, bombs, tag, player_id } = mapInfo;
     const player = getPlayer(players);
     if (!player || !this.bestLand) return;
+    if (tag === 'bomb:explosed' && this.destinationNodeWithoutBomb && player_id === PLAYER_ID) {
+      this.destinationNodeWithoutBomb = undefined;
+    }
+    if (this.destinationNodeWithoutBomb) return;
     const grid = createDestroyWoodGrid(
       map,
       player.currentPosition,
       bombs,
+      players,
+      spoils,
+      this.bestLand
+    );
+
+    const gridWithoutBomb = createDestroyWoodGrid(
+      map,
+      player.currentPosition,
+      [],
       players,
       spoils,
       this.bestLand
@@ -107,6 +122,14 @@ export default class DestroyWoodTask extends BaseTask {
       CAN_GO_NODES,
       undefined
     );
+
+    const inOrderVisitedArrayWithoutBomb = breadthFirstSearchWithScore(
+      gridWithoutBomb,
+      player.power,
+      CAN_GO_NODES,
+      undefined
+    );
+
     const filteredInOrderVisitedArray = inOrderVisitedArray.filter((node) => {
       if (node?.score === undefined || node?.score === null) return true;
       if (node?.score > 0) {
@@ -127,8 +150,33 @@ export default class DestroyWoodTask extends BaseTask {
         return 0;
       }
     );
+
+    const sortedInOrderVisitedArrayWithoutBomb = inOrderVisitedArrayWithoutBomb.filter((node) => {
+      if (node?.score === undefined || node?.score === null) return true;
+      if (node?.score > 0) {
+        return true;
+      } else {
+        return false;
+      }
+    }).sort(
+      (a: INode, b: INode) => {
+        if (b?.score !== undefined && a?.score !== undefined) {
+          return (
+            b?.score -
+            b.distance / STEP_BOMB_RATIO -
+            (a?.score - a.distance / STEP_BOMB_RATIO)
+          );
+        }
+        return 0;
+      }
+    );
     const destinationNode = sortedInOrderVisitedArray[0];
-    // console.log('destinationNode', destinationNode?.row, destinationNode?.col, destinationNode?.score);
+    const destinationNodeWithoutBomb = sortedInOrderVisitedArrayWithoutBomb[0];
+    if (destinationNodeWithoutBomb && destinationNode && (destinationNodeWithoutBomb.col !== destinationNode.col || destinationNodeWithoutBomb.row !== destinationNode.row)) {
+      if (destinationNodeWithoutBomb.distance - destinationNode.distance > 8) {
+        this.destinationNodeWithoutBomb = destinationNodeWithoutBomb;
+      }
+    }
     if (destinationNode && destinationNode.score !== 0) {
       this.pause();
       this.lastDestinationNode = destinationNode;

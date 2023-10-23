@@ -49,7 +49,6 @@ export default class KillTarget extends BaseTask {
 
     
     if (!this.target) return;
-    console.log('this.target', this.target.row, this.target.col);
     const grid = createGrid(
         map,
         player.currentPosition,
@@ -67,7 +66,6 @@ export default class KillTarget extends BaseTask {
           return false;
         }
       });
-      console.log('filteredInOrderVisitedArray', filteredInOrderVisitedArray);
       const sortedInOrderVisitedArray = filteredInOrderVisitedArray.sort(
         (a: INode, b: INode) => {
           if (b?.score !== undefined && a?.score !== undefined) {
@@ -77,7 +75,6 @@ export default class KillTarget extends BaseTask {
         }
       );
       const destinationNode = sortedInOrderVisitedArray[0];
-      console.log('killTarget destinationNode', destinationNode?.row, destinationNode?.col)
       if (destinationNode && destinationNode.score !== 0) {
         this.pause();
         mainTaskStackSubject.next({

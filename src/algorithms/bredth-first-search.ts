@@ -481,7 +481,7 @@ export const createDestroyWoodGrid = (
     keyValueSpoils[getCoordinateComboKey(spoil.row, spoil.col)] =
       spoil.spoil_type;
   });
-  const bombsWithPower = getMappedBombWithPower(bombs, players);
+  const bombsWithPower = getMappedBombWithPower(bombs, players).filter((b) => b.remainTime < 1500);
   const bombsAreaMap = getBombAffectedAreaMapV2(
     bombsWithPower,
     numberOfRow,
@@ -788,9 +788,6 @@ const calculateTargetAreaScore = (
   const { row: targetRow, col: targetCol } = target;
   let score = 0;
   for (let i = 1; i < playerPower + 1; i++) {
-    if (row === 10 && col === 23) {
-      console.log('targetRow - i > 0 && targetRow - i === row && targetCol === col', targetRow - i > 0 && targetRow - i === row && targetCol === col);
-    } 
     if (targetRow - i > 0 && targetRow - i === row && targetCol === col) {
         score++;
         break;
@@ -825,7 +822,7 @@ const calculateNodeScore = (
   if (!node) return;
   const { row, col } = node;
   let score = 0;
-  if ([POWER_EGG_NODE, DELAY_EGG_NODE, SPEED_EGG_NODE].includes(node.value)) {
+  if ([POWER_EGG_NODE, DELAY_EGG_NODE, SPEED_EGG_NODE].includes(node.value) && node.distance < 5) {
     score++;
   }
   for (let i = 1; i < playerPower + 1; i++) {

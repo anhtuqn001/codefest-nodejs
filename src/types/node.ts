@@ -62,6 +62,7 @@ export interface IMapInfo {
   spoils: ISpoil[];
   tag: ITag;
   dragonEggGSTArray: IDragonEggGST[];
+  player_id: string;
 }
 
 export type ITag = string;

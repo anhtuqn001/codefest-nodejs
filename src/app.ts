@@ -86,7 +86,8 @@ export const globalSubject = new BehaviorSubject<IMapInfo>({
   players: [],
   spoils: [],
   tag: '',
-  dragonEggGSTArray: []
+  dragonEggGSTArray: [],
+  player_id: ''
 });
 
 export const advisersSubject = new BehaviorSubject<IMapInfo>({
@@ -95,12 +96,9 @@ export const advisersSubject = new BehaviorSubject<IMapInfo>({
   players: [],
   spoils: [],
   tag: '',
-  dragonEggGSTArray: []
+  dragonEggGSTArray: [],
+  player_id: ''
 });
-
-advisersSubject.subscribe(collideAdviser);
-advisersSubject.subscribe(destroywoodAdviser);
-advisersSubject.subscribe(killTargetAdviser);
 
 export const mainTaskStackSubject = new BehaviorSubject<{
   action: IMainStackAction;
@@ -220,7 +218,7 @@ socket.on("ticktack player", (res) => {
   const spoils: ISpoil[] = res.map_info?.spoils ?? [];
   const tag: ITag = res?.tag;
   const dragonEggGSTArray: IDragonEggGST[] = res?.map_info?.dragonEggGSTArray;
-  console.log('res', res.map_info.dragonEggGSTArray);
+  const player_id: string = res?.player_id;
   if (res?.map_info) {
     globalSubject.next({
       map,
@@ -228,7 +226,8 @@ socket.on("ticktack player", (res) => {
       players,
       spoils,
       tag,
-      dragonEggGSTArray
+      dragonEggGSTArray,
+      player_id
     });
     advisersSubject.next({
       map,
@@ -236,11 +235,11 @@ socket.on("ticktack player", (res) => {
       players,
       spoils,
       tag,
-      dragonEggGSTArray
+      dragonEggGSTArray,
+      player_id
     })
   }
   const player = getPlayer(players);
-  // console.log('tag', tag);
   console.log('mainTaskStack', mainTaskStack.getAllTasks().map(t => t.name));
   mainTaskStackSubject.next({
     action: IMainStackAction.DO,
