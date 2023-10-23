@@ -186,7 +186,7 @@ advisersSubject.subscribe(killTargetAdviser);
 // })
 // collectItemAdviserSubject.subscribe(collectItemAdviser);
 socket.on("connect", () => {
-  // console.log("[Socket] connected to server");
+  console.log("[Socket] connected to server");
   // API-1a
   socket.emit("join game", { game_id: GAME_ID, player_id: PLAYER_ID });
 });
@@ -207,9 +207,9 @@ socket.on("error", (err) => {
 
 // API-1b
 socket.on("join game", (res) => {
-  // console.log("[Socket] join-game responsed", res);
+  console.log("[Socket] join-game responsed", res);
 });
-
+let preLives = 0;
 //API-2
 socket.on("ticktack player", (res) => {
   const map: IRawGrid = res?.map_info?.map ?? [];
@@ -240,6 +240,13 @@ socket.on("ticktack player", (res) => {
     })
   }
   const player = getPlayer(players);
+  if (player?.lives) {
+    if (player?.lives - preLives < 0) {
+      console.log('woundedddddddddddddddddddddddddddddddddddddddddddddddddddddddddd');
+    }
+    preLives = player?.lives;
+  }
+  
   console.log('mainTaskStack', mainTaskStack.getAllTasks().map(t => t.name));
   mainTaskStackSubject.next({
     action: IMainStackAction.DO,

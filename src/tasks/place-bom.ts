@@ -17,6 +17,7 @@ import {
   getPlayer,
   getStartNode,
   getStringPathFromShortestPath,
+  isPlayerIsInDangerousArea,
 } from "../algorithms";
 import {
   breadthFirstSearch,
@@ -35,6 +36,7 @@ export default class PlaceBombTask extends BaseTask {
   safePlace: IPosition | undefined = undefined;
   thiz: PlaceBombTask = this;
   movingOn: IPosition | undefined = undefined;
+  escapingDestination: IPosition | undefined = undefined;
   constructor(globalSubject: IGloBalSubject) {
     super(globalSubject);
     this.thiz = this;
@@ -66,17 +68,65 @@ export default class PlaceBombTask extends BaseTask {
     return destinationNode;
   };
 
+  escapeFromBomb = (player: IPlayer, mapInfo: IMapInfo) => {
+    const { map, spoils, bombs, players } = mapInfo;
+    const nodeGrid = createGrid(
+      map,
+      player.currentPosition,
+      spoils,
+      bombs,
+      players
+    );
+    console.log('player current position', player.currentPosition.row, player.currentPosition.col)
+    // nodeGrid[player.currentPosition.row][player.currentPosition.row].value =
+    //   NORMAL_NODE;
+    const inOrderVisitedArray = breadthFirstSearch(
+      nodeGrid,
+      [...CAN_GO_NODES, BOMB_AFFECTED_NODE],
+      undefined,
+      CAN_GO_NODES
+    );
+    const destinationNode = getDestinationNode(inOrderVisitedArray);
+    console.log('escape destinationNode', destinationNode?.row, destinationNode?.col, destinationNode?.value);
+    if (destinationNode) {
+      if (player.currentPosition.row !== destinationNode.row || player.currentPosition.col !== destinationNode.col) {
+        const shortestPath = getShortestPath(destinationNode);
+        const stringToShortestPath = getStringPathFromShortestPath(
+          player.currentPosition,
+          shortestPath
+        );
+        if (!this.escapingDestination) {
+          this.escapingDestination = { row: destinationNode.row, col: destinationNode.col};
+        }
+        if (stringToShortestPath) {
+          socket.emit("drive player", { direction: stringToShortestPath });
+        }
+      } else {
+        this.stop(this.id);
+      }
+    }
+  };
+
   placeBombTaskObserver = (mapInfo: IMapInfo) => {
     if (!mapInfo) return;
     if (!this.findTheSafePlace || !getStringPathFromShortestPath) return;
     const { players, bombs, map, spoils } = mapInfo;
     const player = getPlayer(players);
     if (!player) return;
+    if (this.escapingDestination) {
+      if (player?.currentPosition.col !== this.escapingDestination?.col || player?.currentPosition.row !== this.escapingDestination?.row) {
+        this.escapeFromBomb(player, mapInfo);
+        return;
+      } else {
+        this.stop(this.id);
+        return;
+      }
+    }
     let stringPath = "";
     const maxRowNumber = map.length;
     const maxColNumber = map[0].length;
     const startPosition = player.currentPosition;
-    if (!this.bombPlaced && !bombs.find(b => b.col === startPosition?.col && b.col === startPosition.row)) {
+    if (!this.bombPlaced) {
       //place a bomb
       stringPath = stringPath + "b";
 
@@ -86,6 +136,18 @@ export default class PlaceBombTask extends BaseTask {
     }
 
     if (this.bombPlaced && !bombs.find(b => b.col === this.bombPlaced?.col && b.row === this.bombPlaced.row)) {
+      const nodeGrid = createGrid(
+        map,
+        player.currentPosition,
+        spoils,
+        bombs,
+        players
+      );
+      if (isPlayerIsInDangerousArea(players, bombs, nodeGrid)) {
+        console.log('escapeeeeeee');
+        this.escapeFromBomb(player, mapInfo);
+        return;
+      }
       this.bombPlaced = undefined;
     }
 
@@ -93,7 +155,7 @@ export default class PlaceBombTask extends BaseTask {
       // player.currentPosition.col === this.bombPlaced?.col &&
       // player.currentPosition.row === this.bombPlaced?.row &&
       // bombs.length > 0 &&
-      this.bombPlaced
+      this.bombPlaced && bombs.find(b => b.col === this.bombPlaced?.col && b.row === this.bombPlaced.row)
       // !this.movingOn
     ) {
       // const shortestPath = this.findTheSafePlace(
@@ -143,6 +205,22 @@ export default class PlaceBombTask extends BaseTask {
         undefined
       );
       let destinationNode = getDestinationNode(inOrderVisitedArray);
+      if (!destinationNode) {
+        const nodeGrid = createGrid(
+          map,
+          player.currentPosition,
+          spoils,
+          bombs,
+          players
+        );
+        if (isPlayerIsInDangerousArea(players, bombs, nodeGrid)) {
+          console.log('escapeeeeeee');
+          this.escapeFromBomb(player, mapInfo)
+          return;
+        }
+        // this.stop(this.id);
+        // return;
+      }
       const shortestPath = getShortestPath(destinationNode);
       const stringPathToShortestPath = getStringPathFromShortestPath(
         player.currentPosition,

@@ -10,7 +10,7 @@ import {
   getShortestPath,
 } from "../algorithms/bredth-first-search";
 import { mainTaskStackSubject, socket } from "../app";
-import { CAN_GO_NODES, GOOD_EGG_NODES, NORMAL_NODE, POWER_EGG_NODE } from "../constants";
+import { BOMB_AFFECTED_NODE, CAN_GO_NODES, GOOD_EGG_NODES, NORMAL_NODE, POWER_EGG_NODE } from "../constants";
 import {
   IGloBalSubject,
   IMainStackAction,
@@ -25,6 +25,7 @@ import BaseTask from "./base-task";
 export default class GoToAndPlaceBombTask extends BaseTask {
   thiz: GoToAndPlaceBombTask = this;
   destinationPosition: INode | undefined = undefined;
+  escapingDestination: IPosition | undefined = undefined;
   constructor(globalSubject: IGloBalSubject, destinationPosition?: INode) {
     super(globalSubject);
     this.thiz = this;
@@ -56,26 +57,34 @@ export default class GoToAndPlaceBombTask extends BaseTask {
       player.currentPosition,
       spoils,
       bombs,
-      players,
-      this.destinationPosition
+      players
     );
-    nodeGrid[player.currentPosition.row][player.currentPosition.row].value =
-      NORMAL_NODE;
+    console.log('player current position', player.currentPosition.row, player.currentPosition.col)
+    // nodeGrid[player.currentPosition.row][player.currentPosition.row].value =
+    //   NORMAL_NODE;
     const inOrderVisitedArray = breadthFirstSearch(
       nodeGrid,
-      [...CAN_GO_NODES],
+      [...CAN_GO_NODES, BOMB_AFFECTED_NODE],
       undefined,
-      [NORMAL_NODE]
+      CAN_GO_NODES
     );
     const destinationNode = getDestinationNode(inOrderVisitedArray);
+    console.log('escapeFromBomb destinationNode', destinationNode?.row, destinationNode?.col, destinationNode?.value);
     if (destinationNode) {
-      const shortestPath = getShortestPath(destinationNode);
-      const stringToShortestPath = getStringPathFromShortestPath(
-        player.currentPosition,
-        shortestPath
-      );
-      if (stringToShortestPath) {
-        socket.emit("drive player", { direction: stringToShortestPath });
+      if (player.currentPosition.row !== destinationNode.row || player.currentPosition.col !== destinationNode.col) {
+        const shortestPath = getShortestPath(destinationNode);
+        const stringToShortestPath = getStringPathFromShortestPath(
+          player.currentPosition,
+          shortestPath
+        );
+        if (!this.escapingDestination) {
+          this.escapingDestination = { row: destinationNode.row, col: destinationNode.col};
+        }
+        if (stringToShortestPath) {
+          socket.emit("drive player", { direction: stringToShortestPath });
+        }
+      } else {
+        this.stop(this.id);
       }
     }
   };
@@ -91,6 +100,15 @@ export default class GoToAndPlaceBombTask extends BaseTask {
     const { players, bombs, map, spoils, tag } = mapInfo;
     const player = getPlayer(players);
     if (!player) return;
+    if (this.escapingDestination) {
+      if (player?.currentPosition.col !== this.escapingDestination?.col || player?.currentPosition.row !== this.escapingDestination.row) {
+        this.escapeFromBomb(player, mapInfo);
+        return;
+      } else {
+        this.stop(this.id);
+        return;
+      }
+    }
     if (!this.destinationPosition) return;
     if (
       player.currentPosition.col === this.destinationPosition?.col &&
@@ -129,9 +147,10 @@ export default class GoToAndPlaceBombTask extends BaseTask {
       if (isPlayerIsInDangerousArea(players, bombs, nodeGrid)) {
         console.log('escaped');
         this.escapeFromBomb(player, mapInfo);
+        return;
       }
-      this.stop(this.id);
-      return;
+      // this.stop(this.id);
+      // return;
     }
     const shortestPath = getShortestPath(destinationNode);
     const stringPathToShortestPath = getStringPathFromShortestPath(

@@ -223,6 +223,7 @@ export const createGrid = (
     numberOfRow,
     numberOfCol
   );
+  // console.log('bombsAreaMap', bombsAreaMap);
   const keyValueSpoils: { [key: string]: number } = {};
   spoils?.forEach((spoil) => {
     keyValueSpoils[getCoordinateComboKey(spoil.row, spoil.col)] =
@@ -481,7 +482,7 @@ export const createDestroyWoodGrid = (
     keyValueSpoils[getCoordinateComboKey(spoil.row, spoil.col)] =
       spoil.spoil_type;
   });
-  const bombsWithPower = getMappedBombWithPower(bombs, players).filter((b) => b.remainTime < 1500);
+  const bombsWithPower = getMappedBombWithPower(bombs, players);
   const bombsAreaMap = getBombAffectedAreaMapV2(
     bombsWithPower,
     numberOfRow,
