@@ -62,7 +62,7 @@ app.post("/:action", function (req, res) {
     mainTaskStackSubject.next({
       action: IMainStackAction.ADD,
       params: {
-        taskName: "destroy-wood",
+        taskName: "place-bomb-task",
       },
     });
   } else {

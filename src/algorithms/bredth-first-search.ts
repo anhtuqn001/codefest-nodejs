@@ -8,6 +8,7 @@ import {
   BOMB_AFFECTED_NODE,
   CANNOT_GO_NODE,
   CAN_GO_NODES,
+  DANGEROUS_BOMB_AFFECTED_NODE,
   DELAY_EGG_NODE,
   EGG_NODE,
   NODE_SPOIL_TYPE_MAPPING,
@@ -218,11 +219,13 @@ export const createGrid = (
   const numberOfCol = rawGrid[0].length;
   const opponent = getOpponent(players);
   const bombsWithPower = getMappedBombWithPower(bombs, players);
-  const bombsAreaMap = getBombAffectedAreaMapV2(
+  const { bombsAreaMap } = getBombAffectedAreaMapV2(
     bombsWithPower,
     numberOfRow,
     numberOfCol
   );
+  // console.log('bombs', bombs);
+  // console.log('bombsAreaMap', bombsAreaMap);
   // console.log('bombsAreaMap', bombsAreaMap);
   const keyValueSpoils: { [key: string]: number } = {};
   spoils?.forEach((spoil) => {
@@ -265,6 +268,73 @@ export const createGrid = (
   return grid;
 };
 
+export const createGridToAvoidBomb = (
+  rawGrid: IRawGrid,
+  startNode: IPosition | undefined,
+  spoils: ISpoil[],
+  bombs: IBomb[],
+  players: IPlayer[],
+  endNode?: IPosition | undefined
+): IGrid => {
+  if (!startNode) return [];
+  const grid: IGrid = [];
+  const numberOfRow = rawGrid.length;
+  const numberOfCol = rawGrid[0].length;
+  const opponent = getOpponent(players);
+  const bombsWithPower = getMappedBombWithPower(bombs, players);
+  const { bombsAreaMap, bombsAreaRemainingTime } = getBombAffectedAreaMapV2(
+    bombsWithPower,
+    numberOfRow,
+    numberOfCol
+  );
+  // console.log('bombsWithPower', bombsWithPower);
+  // console.log('bombsAreaRemainingTime', bombsAreaRemainingTime);
+  const keyValueSpoils: { [key: string]: number } = {};
+  spoils?.forEach((spoil) => {
+    keyValueSpoils[getCoordinateComboKey(spoil.row, spoil.col)] =
+      spoil.spoil_type;
+  });
+  for (let rowIndex = 0; rowIndex < numberOfRow; rowIndex++) {
+    grid[rowIndex] = [];
+    for (let colIndex = 0; colIndex < numberOfCol; colIndex++) {
+      const isStart =
+        startNode && rowIndex == startNode.row && colIndex == startNode.col
+          ? true
+          : false;
+      const isDestination =
+        endNode && rowIndex == endNode.row && colIndex == endNode.col
+          ? true
+          : false;
+      let value = keyValueSpoils[getCoordinateComboKey(rowIndex, colIndex)]
+        ? NODE_SPOIL_TYPE_MAPPING[
+            keyValueSpoils[getCoordinateComboKey(rowIndex, colIndex)].toString()
+          ]
+        : rawGrid[rowIndex][colIndex];
+      if (
+        bombsAreaMap[rowIndex.toString()] &&
+        bombsAreaMap[rowIndex.toString()].includes(colIndex) && !CANNOT_GO_NODE.filter(value => value !== BOMB_AFFECTED_NODE).includes(value)
+      ) {
+        if (bombsAreaRemainingTime[getCoordinateComboKey(rowIndex, colIndex)] !== undefined && bombsAreaRemainingTime[getCoordinateComboKey(rowIndex, colIndex)] < 500) {
+          value = DANGEROUS_BOMB_AFFECTED_NODE;
+        } else {
+          value = BOMB_AFFECTED_NODE;
+        }
+      }
+      if (
+        opponent?.currentPosition.row === rowIndex &&
+        opponent?.currentPosition.col === colIndex
+      ) {
+        value = OPPONENT_NODE;
+      }
+      grid[rowIndex].push(
+        createNode(rowIndex, colIndex, value, isStart, isDestination)
+      );
+    }
+  }
+  console.log('number of dangerous bombs', grid.flat().filter(node => node.value === DANGEROUS_BOMB_AFFECTED_NODE).length);
+  return grid;
+};
+
 export const createGridForPlaceBomb = (
   rawGrid: IRawGrid,
   startNode: IPosition | undefined,
@@ -280,7 +350,7 @@ export const createGridForPlaceBomb = (
   const numberOfCol = rawGrid[0].length;
   const opponent = getOpponent(players);
   const bombsWithPower = getMappedBombWithPower(bombs, players);
-  const bombsAreaMap = getBombAffectedAreaMapV2(
+  const { bombsAreaMap } = getBombAffectedAreaMapV2(
     bombsWithPower.filter((b) => b.col !== myBomb.col || b.row !== myBomb.row),
     numberOfRow,
     numberOfCol
@@ -395,7 +465,7 @@ export const createBombGridV2 = (
       b.col === startNode.col &&
       b.row === startNode.row
   );
-  const bombsAreaMap = getBombAffectedAreaMapV2(
+  const {bombsAreaMap} = getBombAffectedAreaMapV2(
     bombsWithPower,
     numberOfRow,
     numberOfCol
@@ -403,7 +473,7 @@ export const createBombGridV2 = (
   const myPlayer = players.find((p) => p.id === PLAYER_ID);
   const opponent = getOpponent(players);
   if (!myPlayer || !myPlacedBombWithPower) return [];
-  const startbombsAreaMap = getBombAffectedAreaMapV2(
+  const {bombsAreaMap: startbombsAreaMap} = getBombAffectedAreaMapV2(
     [myPlacedBombWithPower],
     numberOfRow,
     numberOfCol
@@ -483,7 +553,7 @@ export const createDestroyWoodGrid = (
       spoil.spoil_type;
   });
   const bombsWithPower = getMappedBombWithPower(bombs, players);
-  const bombsAreaMap = getBombAffectedAreaMapV2(
+  const { bombsAreaMap } = getBombAffectedAreaMapV2(
     bombsWithPower,
     numberOfRow,
     numberOfCol
@@ -626,23 +696,48 @@ export const getBombAffectedAreaMapV2 = (
   maxColNumber: number
 ) => {
   const bombsAreaMap: { [key: string]: number[] } = {};
+  const bombsAreaRemainingTime: { [key: string]: number } = {};
   for (let i = 0; i < bombsWithPower.length; i++) {
     bombsAreaMap[bombsWithPower[i].row] = [
       ...(bombsAreaMap[bombsWithPower[i].row] ?? []),
       bombsWithPower[i].col,
     ];
+    const rowColComboKey = getCoordinateComboKey(bombsWithPower[i].row, bombsWithPower[i].col);
+    if (bombsAreaRemainingTime[rowColComboKey] === undefined) {
+      bombsAreaRemainingTime[rowColComboKey] = bombsWithPower[i].remainTime;
+    } else {
+      if (bombsAreaRemainingTime[rowColComboKey] >= bombsWithPower[i].remainTime) {
+        bombsAreaRemainingTime[rowColComboKey] = bombsWithPower[i].remainTime
+      }
+    }
     for (let j = 1; j < bombsWithPower[i].power + 1; j++) {
       if (bombsWithPower[i].row - j >= 0) {
         bombsAreaMap[bombsWithPower[i].row - j] = [
           ...(bombsAreaMap[bombsWithPower[i].row - j] ?? []),
           bombsWithPower[i].col,
         ];
+        const rowColComboKey = getCoordinateComboKey(bombsWithPower[i].row - j, bombsWithPower[i].col);
+        if (bombsAreaRemainingTime[rowColComboKey] === undefined) {
+          bombsAreaRemainingTime[rowColComboKey] = bombsWithPower[i].remainTime;
+        } else {
+          if (bombsAreaRemainingTime[rowColComboKey] >= bombsWithPower[i].remainTime) {
+            bombsAreaRemainingTime[rowColComboKey] = bombsWithPower[i].remainTime
+          }
+        }
       }
       if (bombsWithPower[i].row + j < maxRowNumber) {
         bombsAreaMap[bombsWithPower[i].row + j] = [
           ...(bombsAreaMap[bombsWithPower[i].row + j] ?? []),
           bombsWithPower[i].col,
         ];
+        const rowColComboKey = getCoordinateComboKey(bombsWithPower[i].row + j, bombsWithPower[i].col);
+        if (bombsAreaRemainingTime[rowColComboKey] === undefined) {
+          bombsAreaRemainingTime[rowColComboKey] = bombsWithPower[i].remainTime;
+        } else {
+          if (bombsAreaRemainingTime[rowColComboKey] >= bombsWithPower[i].remainTime) {
+            bombsAreaRemainingTime[rowColComboKey] = bombsWithPower[i].remainTime
+          }
+        }
       }
 
       if (bombsWithPower[i].col + j < maxColNumber) {
@@ -650,25 +745,43 @@ export const getBombAffectedAreaMapV2 = (
           ...(bombsAreaMap[bombsWithPower[i].row] ?? []),
           bombsWithPower[i].col + j,
         ];
+        const rowColComboKey = getCoordinateComboKey(bombsWithPower[i].row, bombsWithPower[i].col + j);
+        if (bombsAreaRemainingTime[rowColComboKey] === undefined) {
+          bombsAreaRemainingTime[rowColComboKey] = bombsWithPower[i].remainTime;
+        } else {
+          if (bombsAreaRemainingTime[rowColComboKey] >= bombsWithPower[i].remainTime) {
+            bombsAreaRemainingTime[rowColComboKey] = bombsWithPower[i].remainTime
+          }
+        }
       }
       if (bombsWithPower[i].col - j >= 0) {
         bombsAreaMap[bombsWithPower[i].row] = [
           ...(bombsAreaMap[bombsWithPower[i].row] ?? []),
           bombsWithPower[i].col - j,
         ];
+        const rowColComboKey = getCoordinateComboKey(bombsWithPower[i].row, bombsWithPower[i].col - j);
+        if (bombsAreaRemainingTime[rowColComboKey] === undefined) {
+          bombsAreaRemainingTime[rowColComboKey] = bombsWithPower[i].remainTime;
+        } else {
+          if (bombsAreaRemainingTime[rowColComboKey] >= bombsWithPower[i].remainTime) {
+            bombsAreaRemainingTime[rowColComboKey] = bombsWithPower[i].remainTime
+          }
+        }
       }
     }
   }
-  return bombsAreaMap;
+  // console.log('bombsWithPower', bombsWithPower);
+  // console.log('bombsAreaRemainingTime', bombsAreaRemainingTime);
+  return {bombsAreaMap, bombsAreaRemainingTime};
 };
 
-const isValueNodes = (
+export const isValueNodes = (
   objects: TNodeValue[] | IPosition[]
 ): objects is TNodeValue[] => {
   return objects.some((o) => typeof o === "number");
 };
 
-const isPositionNodes = (objects: any): objects is IPosition[] => {
+export const isPositionNodes = (objects: any): objects is IPosition[] => {
   return objects.every((o: any) => "row" in o && "col" in o);
 };
 

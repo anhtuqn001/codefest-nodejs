@@ -365,7 +365,7 @@ export const findNearestPositionOfBestLand = (bestLand: IBestLandType, player: I
 export const isPlayerIsInDangerousArea = (players: IPlayer[], bombs: IBomb[], nodeGrid: INode[][]): boolean => {
   const player = getPlayer(players);
   const bombsWithPower = getMappedBombWithPower(bombs, players);
-  const bombsAreaMap = getBombAffectedAreaMapV2(bombsWithPower, nodeGrid.length, nodeGrid[0].length)
+  const { bombsAreaMap } = getBombAffectedAreaMapV2(bombsWithPower, nodeGrid.length, nodeGrid[0].length)
   if (!player || bombs?.length === 0) return false;
   if (bombsAreaMap) {
     if (bombsAreaMap[player.currentPosition.row.toString()] && bombsAreaMap[player.currentPosition.row.toString()].includes(player.currentPosition.col)) {
