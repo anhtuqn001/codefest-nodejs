@@ -124,7 +124,7 @@ export default class DestroyWoodTask extends BaseTask {
     const inOrderVisitedArray = breadthFirstSearchWithScore(
       grid,
       player.power,
-      CAN_GO_NODES,
+      [...CAN_GO_NODES, BOMB_AFFECTED_NODE],
       undefined
     );
 
@@ -137,11 +137,8 @@ export default class DestroyWoodTask extends BaseTask {
 
     const filteredInOrderVisitedArray = inOrderVisitedArray.filter((node) => {
       if (node?.score === undefined || node?.score === null) return true;
-      if (node?.score > 0) {
-        return true;
-      } else {
-        return false;
-      }
+      if (node.value === BOMB_AFFECTED_NODE) return false;
+      return node.score > 0;
     });
     const sortedInOrderVisitedArray = filteredInOrderVisitedArray.sort(
       (a: INode, b: INode) => {
@@ -176,14 +173,12 @@ export default class DestroyWoodTask extends BaseTask {
       }
     );
     const destinationNode = sortedInOrderVisitedArray[0];
-    console.log('destinationNode', destinationNode);
     if (!destinationNode) {
       // open road
       const tempGrid = createGrid(map, player.currentPosition, spoils, bombs, players);
       // console.log('wood nodes', grid.flat().filter(node => node.value === WOOD_NODE).map(node => node?.row + '|' + node?.col));
       const inOderVisitedArray = dijktra(tempGrid, [...CAN_GO_NODES, WOOD_NODE, BOMB_AFFECTED_NODE], undefined, grid.flat().filter(node => node.value === WOOD_NODE));
       const destination = getDestinationNode(inOderVisitedArray);
-      console.log('closest node for cluster', destination?.row, destination?.col);
       this.pause();
       mainTaskStackSubject.next({
         action: IMainStackAction.ADD,

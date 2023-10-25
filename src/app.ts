@@ -42,7 +42,7 @@ import killTargetAdviser from "./advisers/kill-target-adviser";
 import KillTarget from "./tasks/kill-target";
 import OpenRoad from "./tasks/open-road";
 
-const targetServer = "http://172.20.10.4";
+const targetServer = "http://localhost";
 
 const app = express();
 const port = 3000;

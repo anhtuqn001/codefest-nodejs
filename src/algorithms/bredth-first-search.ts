@@ -3,9 +3,11 @@ import {
   getDestinationNode,
   getMappedBombWithPower,
   getOpponent,
+  isPositionHaveBomb,
 } from ".";
 import {
   BOMB_AFFECTED_NODE,
+  BOMB_NODE,
   CANNOT_GO_NODE,
   CAN_GO_NODES,
   DANGEROUS_BOMB_AFFECTED_NODE,
@@ -16,6 +18,7 @@ import {
   OPPONENT_NODE,
   PLAYER_ID,
   POWER_EGG_NODE,
+  SAFE_BOMB_TIME,
   SPEED_EGG_NODE,
   START_BOMB_AFFECTED_NODE,
   STONE_NODE,
@@ -216,7 +219,7 @@ export const createGrid = (
   const numberOfCol = rawGrid[0].length;
   const opponent = getOpponent(players);
   const bombsWithPower = getMappedBombWithPower(bombs, players);
-  const { bombsAreaMap } = getBombAffectedAreaMapV2(
+  const { bombsAreaMap, bombsAreaRemainingTime } = getBombAffectedAreaMapV2(
     bombsWithPower,
     numberOfRow,
     numberOfCol
@@ -237,16 +240,36 @@ export const createGrid = (
         endNode && rowIndex == endNode.row && colIndex == endNode.col
           ? true
           : false;
-      let value = keyValueSpoils[getCoordinateComboKey(rowIndex, colIndex)]
-        ? NODE_SPOIL_TYPE_MAPPING[
-            keyValueSpoils[getCoordinateComboKey(rowIndex, colIndex)].toString()
-          ]
-        : rawGrid[rowIndex][colIndex];
-      if (
-        bombsAreaMap[rowIndex.toString()] &&
-        bombsAreaMap[rowIndex.toString()].includes(colIndex)
-      ) {
-        value = BOMB_AFFECTED_NODE;
+      const isBombAffectedNode =
+          bombs?.length > 0
+            ? bombsAreaMap[rowIndex.toString()] &&
+              bombsAreaMap[rowIndex.toString()].includes(colIndex)
+            : false;
+      let value = rawGrid[rowIndex][colIndex];
+      // let value = keyValueSpoils[getCoordinateComboKey(rowIndex, colIndex)]
+      //   ? NODE_SPOIL_TYPE_MAPPING[
+      //       keyValueSpoils[getCoordinateComboKey(rowIndex, colIndex)].toString()
+      //     ]
+      //   : rawGrid[rowIndex][colIndex];
+      if (CAN_GO_NODES.includes(value)) {
+        if (isBombAffectedNode) {
+          if (bombsAreaRemainingTime[getCoordinateComboKey(rowIndex, colIndex)] !== undefined) {
+            if (bombsAreaRemainingTime[getCoordinateComboKey(rowIndex, colIndex)] < SAFE_BOMB_TIME) {
+              value = DANGEROUS_BOMB_AFFECTED_NODE
+            } else {
+              value = BOMB_AFFECTED_NODE
+            }
+          }
+        }
+        if (isPositionHaveBomb( { row: rowIndex, col: colIndex } , bombsWithPower)) {
+        value = BOMB_NODE
+        }
+      }
+      if (keyValueSpoils[getCoordinateComboKey(rowIndex, colIndex)]) {
+            value =
+              NODE_SPOIL_TYPE_MAPPING[
+                keyValueSpoils[getCoordinateComboKey(rowIndex, colIndex)].toString()
+              ];
       }
       if (
         opponent?.currentPosition.row === rowIndex &&
@@ -322,6 +345,9 @@ export const createGridToAvoidBomb = (
         createNode(rowIndex, colIndex, value, isStart, isDestination)
       );
     }
+  }
+  if (grid[startNode.row][startNode.col].value === DANGEROUS_BOMB_AFFECTED_NODE) {
+    grid[startNode.row][startNode.col].value = BOMB_AFFECTED_NODE;
   }
   return grid;
 };
@@ -544,7 +570,7 @@ export const createDestroyWoodGrid = (
       spoil.spoil_type;
   });
   const bombsWithPower = getMappedBombWithPower(bombs, players);
-  const { bombsAreaMap } = getBombAffectedAreaMapV2(
+  const { bombsAreaMap, bombsAreaRemainingTime } = getBombAffectedAreaMapV2(
     bombsWithPower,
     numberOfRow,
     numberOfCol
@@ -563,9 +589,18 @@ export const createDestroyWoodGrid = (
           : false;
       let value = rawGrid[rowIndex][colIndex];
       if (CAN_GO_NODES.includes(value)) {
-        value = isBombAffectedNode
-          ? BOMB_AFFECTED_NODE
-          : rawGrid[rowIndex][colIndex];
+        if (isBombAffectedNode) {
+          if (bombsAreaRemainingTime[getCoordinateComboKey(rowIndex, colIndex)] !== undefined) {
+            if (bombsAreaRemainingTime[getCoordinateComboKey(rowIndex, colIndex)] < SAFE_BOMB_TIME) {
+              value = DANGEROUS_BOMB_AFFECTED_NODE
+            } else {
+              value = BOMB_AFFECTED_NODE
+            }
+          }
+        }
+        if (isPositionHaveBomb( { row: rowIndex, col: colIndex } , bombsWithPower)) {
+        value = BOMB_NODE
+        }
       }
       if (keyValueSpoils[getCoordinateComboKey(rowIndex, colIndex)]) {
         value =
@@ -927,6 +962,18 @@ const calculateNodeScore = (
   let score = 0;
   if ([POWER_EGG_NODE, DELAY_EGG_NODE, SPEED_EGG_NODE].includes(node.value) && node.distance < 5) {
     score++;
+    if(row - 1 > 0 && [POWER_EGG_NODE, DELAY_EGG_NODE, SPEED_EGG_NODE].includes(grid[row - 1][col].value)) {
+      score += 0.5
+    }
+    if(row + 1 < grid.length && [POWER_EGG_NODE, DELAY_EGG_NODE, SPEED_EGG_NODE].includes(grid[row + 1][col].value)) {
+      score += 0.5
+    }
+    if(col - 1 > 0 && [POWER_EGG_NODE, DELAY_EGG_NODE, SPEED_EGG_NODE].includes(grid[row][col - 1].value)) {
+      score += 0.5
+    }
+    if(col + 1 < grid[0].length && [POWER_EGG_NODE, DELAY_EGG_NODE, SPEED_EGG_NODE].includes(grid[row][col + 1].value)) {
+      score += 0.5
+    }
   }
   for (let i = 1; i < playerPower + 1; i++) {
     if (row - i > 0) {

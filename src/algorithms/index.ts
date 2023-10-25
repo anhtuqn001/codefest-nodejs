@@ -434,3 +434,7 @@ export const findTargetGSTEgg = (dragonEggGSTArray: IDragonEggGST[]) => {
 export const isSamePosition = (node1: IPosition, node2: IPosition) => {
   return node1.row === node2.row && node1.col === node2.col;
 }
+
+export const isPositionHaveBomb = (position: IPosition, bombs: IBomb[]) => {
+  return !!bombs.find(bomb => bomb.row === position.row && bomb.col === position.col)
+}
