@@ -1,5 +1,6 @@
 import {
   BOMB_AFFECTED_NODE,
+  CAN_GO_NODES,
   EGG_NODE,
   NEAR_BY_PLAYER_AREA_LAYER,
   NODE_SPOIL_TYPE_MAPPING,
@@ -13,6 +14,7 @@ import {
   IBomb,
   IBombWithPower,
   IDragonEggGST,
+  IMapInfo,
   INode,
   IPlayer,
   IPosition,
@@ -26,7 +28,9 @@ import {
   createNode,
   getBombAffectedAreaMapV2,
   getBombAffectedPositions,
+  getShortestPath,
 } from "./bredth-first-search";
+import dijktra from "./dijktra";
 
 export const getPlayer = (players: IPlayer[]): IPlayer | undefined => {
   for (let i = 0; i < players.length; i++) {
@@ -327,10 +331,17 @@ export const calculateWoodNodeScore = (
   return score;
 };
 
-export const getBestLand = (landSeaRawGrid: IRawGrid): {[key: string]: Array<string>} | undefined => {
-  if (!landSeaRawGrid) return {};
+export const getBestLand = (mapInfo: IMapInfo ,landSeaRawGrid: IRawGrid): {
+  bestLand: {[key: string]: Array<string>} | undefined;
+  closestNode: INode | undefined
+} => {
+  if (!landSeaRawGrid) return {
+    bestLand: undefined,
+    closestNode: undefined
+  };;
   const landSeaGrid = createLandSeaGrid(landSeaRawGrid);
   let landsObject: {[key: string]: string[]} = {}
+  let closestNodesObject: {[key: string]: INode} = {};
   for (let i = 0; i < landSeaGrid.length; i++) {
     for (let j = 0; j < landSeaGrid[i].length; j++) {
       if (!landSeaGrid[i][j].isVisited && landSeaGrid[i][j].value !== 0) {
@@ -342,9 +353,32 @@ export const getBestLand = (landSeaRawGrid: IRawGrid): {[key: string]: Array<str
         const total = inOrderVisitedArray.reduce((total: number, node: INode) => {
           return total + node.value
         }, 0)
-        landsObject = {
-          ...landsObject,
-          [total]: inOrderVisitedArray.map(node => getCoordinateComboKey(node.row, node.col))
+        const coordinateCombosInArea = inOrderVisitedArray.map(node => getCoordinateComboKey(node.row, node.col));
+        const positionOfNew = findNearestPositionOfBestLand(mapInfo, coordinateCombosInArea);
+        if (landsObject[total] !== undefined) {
+          const positionOfAdded = findNearestPositionOfBestLand(mapInfo, landsObject[total]);
+          // const positionOfNew = findNearestPositionOfBestLand(mapInfo, coordinateCombosInArea);
+          if (positionOfAdded && positionOfNew) {
+            if (positionOfAdded.distance >= positionOfNew.distance) {
+              landsObject = {
+                ...landsObject,
+                [total]: coordinateCombosInArea
+              }
+              closestNodesObject = {
+                ...closestNodesObject,
+                [total]: positionOfNew
+              }
+            }
+          }
+        } else {
+          landsObject = {
+            ...landsObject,
+            [total]: coordinateCombosInArea
+          }
+          closestNodesObject = {
+            ...closestNodesObject,
+            [total]: positionOfNew
+          }
         }
       }
     }
@@ -352,14 +386,32 @@ export const getBestLand = (landSeaRawGrid: IRawGrid): {[key: string]: Array<str
   const totals = Object.keys(landsObject);
   const totalsInDesOrder = totals.sort((a: string, b: string) => parseInt(b) - parseInt(a));
   const highestLand = landsObject[totalsInDesOrder[0]];
-  if (!highestLand) return undefined;
-  return Object.assign({}, ...(highestLand.map(item => ({ [item]: item.split("|") }))));
+  const closestNodeOfHighestLand = closestNodesObject[totalsInDesOrder[0]];
+  if (!highestLand) return {
+    bestLand: undefined,
+    closestNode: undefined
+  };
+  return {
+    bestLand: Object.assign({}, ...(highestLand.map(item => ({ [item]: item.split("|") })))),
+    closestNode: closestNodeOfHighestLand
+  };
 };
 
-export const findNearestPositionOfBestLand = (bestLand: IBestLandType, player: IPlayer | undefined): IPosition | null => {
-  if (!player) return null;
-  return null;
-  
+export const findNearestPositionOfBestLand = (mapInfo: IMapInfo, coordinateCombosInArea: string[]): INode | undefined => {
+  const { map, bombs, players, spoils } = mapInfo;
+  const player = getPlayer(players);
+  if (!player) return undefined;
+  const grid = createGrid(map, player?.currentPosition, spoils, bombs, players);
+  const bestLandPositions = coordinateCombosInArea.map(item => {
+    const arrayConverted = item.split("|")
+    return {
+      row: parseInt(arrayConverted[0]),
+      col: parseInt(arrayConverted[1]),
+    }
+  })
+  const inOrderVisitedArray = dijktra(grid, [...CAN_GO_NODES, WOOD_NODE], undefined, bestLandPositions);
+  const destinationNode = getDestinationNode(inOrderVisitedArray);
+  return destinationNode;
 }
 
 export const isPlayerIsInDangerousArea = (players: IPlayer[], bombs: IBomb[], nodeGrid: INode[][]): boolean => {
@@ -377,4 +429,8 @@ export const isPlayerIsInDangerousArea = (players: IPlayer[], bombs: IBomb[], no
 
 export const findTargetGSTEgg = (dragonEggGSTArray: IDragonEggGST[]) => {
   return dragonEggGSTArray.find(e => e.id !== PLAYER_ID);
+}
+
+export const isSamePosition = (node1: IPosition, node2: IPosition) => {
+  return node1.row === node2.row && node1.col === node2.col;
 }

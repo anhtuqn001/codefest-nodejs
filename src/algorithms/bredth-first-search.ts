@@ -149,9 +149,6 @@ const getUnvisitedNeighbors = (
   if (row < grid.length - 1) neighbors.push(grid[row + 1][col]);
   if (col > 0) neighbors.push(grid[row][col - 1]);
   if (col < grid[0].length - 1) neighbors.push(grid[row][col + 1]);
-  // neighbors = randomlyProvideNeighbors(node, grid, neighbors);
-  if (node.row === 2 && node.col === 15) {
-  }
   return neighbors.filter((node) => {
     let defaultAllowedNodes = [NORMAL_NODE];
     let defaultNotAllowedNodes = [STONE_NODE];
@@ -224,9 +221,6 @@ export const createGrid = (
     numberOfRow,
     numberOfCol
   );
-  // console.log('bombs', bombs);
-  // console.log('bombsAreaMap', bombsAreaMap);
-  // console.log('bombsAreaMap', bombsAreaMap);
   const keyValueSpoils: { [key: string]: number } = {};
   spoils?.forEach((spoil) => {
     keyValueSpoils[getCoordinateComboKey(spoil.row, spoil.col)] =
@@ -287,8 +281,6 @@ export const createGridToAvoidBomb = (
     numberOfRow,
     numberOfCol
   );
-  // console.log('bombsWithPower', bombsWithPower);
-  // console.log('bombsAreaRemainingTime', bombsAreaRemainingTime);
   const keyValueSpoils: { [key: string]: number } = {};
   spoils?.forEach((spoil) => {
     keyValueSpoils[getCoordinateComboKey(spoil.row, spoil.col)] =
@@ -314,7 +306,7 @@ export const createGridToAvoidBomb = (
         bombsAreaMap[rowIndex.toString()] &&
         bombsAreaMap[rowIndex.toString()].includes(colIndex) && !CANNOT_GO_NODE.filter(value => value !== BOMB_AFFECTED_NODE).includes(value)
       ) {
-        if (bombsAreaRemainingTime[getCoordinateComboKey(rowIndex, colIndex)] !== undefined && bombsAreaRemainingTime[getCoordinateComboKey(rowIndex, colIndex)] < 500) {
+        if (bombsAreaRemainingTime[getCoordinateComboKey(rowIndex, colIndex)] !== undefined && bombsAreaRemainingTime[getCoordinateComboKey(rowIndex, colIndex)] < 700) {
           value = DANGEROUS_BOMB_AFFECTED_NODE;
         } else {
           value = BOMB_AFFECTED_NODE;
@@ -331,7 +323,6 @@ export const createGridToAvoidBomb = (
       );
     }
   }
-  console.log('number of dangerous bombs', grid.flat().filter(node => node.value === DANGEROUS_BOMB_AFFECTED_NODE).length);
   return grid;
 };
 
@@ -770,8 +761,6 @@ export const getBombAffectedAreaMapV2 = (
       }
     }
   }
-  // console.log('bombsWithPower', bombsWithPower);
-  // console.log('bombsAreaRemainingTime', bombsAreaRemainingTime);
   return {bombsAreaMap, bombsAreaRemainingTime};
 };
 

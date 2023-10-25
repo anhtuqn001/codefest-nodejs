@@ -13,8 +13,11 @@ import {
   createGrid,
   getShortestPath,
 } from "../algorithms/bredth-first-search";
+import dijktra from "../algorithms/dijktra";
 import { mainTaskStackSubject } from "../app";
 import {
+  BOMB_AFFECTED_NODE,
+  CANNOT_GO_NODE,
   CAN_GO_NODES,
   DELAY_EGG_NODE,
   NORMAL_NODE,
@@ -42,6 +45,7 @@ export default class DestroyWoodTask extends BaseTask {
   thiz: DestroyWoodTask = this;
   targetArea: IRawGrid | null = [];
   bestLand: IBestLandType | undefined = undefined;
+  closestNode: INode | undefined = undefined;
   firstRendered: boolean = false;
   passedNodes: IBestLandType = {};
   lastDestinationNode: INode | undefined = undefined;
@@ -66,31 +70,32 @@ export default class DestroyWoodTask extends BaseTask {
       return;
   };
 
-  findNearestPositionOfBestLand = (
-    bestLand: IBestLandType,
-    player: IPlayer | undefined,
-    mapInfo: IMapInfo
-  ): IPosition => {
-    const { map, bombs, players, spoils } = mapInfo;
-    const grid = createGrid(
-      map,
-      player?.currentPosition,
-      spoils,
-      bombs,
-      players
-    );
-    const inOrderVisitedArray = breadthFirstSearchForLand(
-      grid,
-      [NORMAL_NODE, WOOD_NODE],
-      undefined,
-      bestLand
-    );
-    const destinationNode = getDestinationNode(inOrderVisitedArray);
-    const shortestPath = getShortestPath(destinationNode);
-    return shortestPath[shortestPath.length - 1];
-  };
+  // findNearestPositionOfBestLand = (
+  //   bestLand: IBestLandType,
+  //   player: IPlayer | undefined,
+  //   mapInfo: IMapInfo
+  // ): IPosition => {
+  //   const { map, bombs, players, spoils } = mapInfo;
+  //   const grid = createGrid(
+  //     map,
+  //     player?.currentPosition,
+  //     spoils,
+  //     bombs,
+  //     players
+  //   );
+  //   const inOrderVisitedArray = breadthFirstSearchForLand(
+  //     grid,
+  //     [NORMAL_NODE, WOOD_NODE],
+  //     undefined,
+  //     bestLand
+  //   );
+  //   const destinationNode = getDestinationNode(inOrderVisitedArray);
+  //   const shortestPath = getShortestPath(destinationNode);
+  //   return shortestPath[shortestPath.length - 1];
+  // };
 
   destroyLand = (mapInfo: IMapInfo) => {
+    console.log('destroyLand');
     const { map, players, spoils, bombs, tag, player_id } = mapInfo;
     const player = getPlayer(players);
     if (!player || !this.bestLand) return;
@@ -171,6 +176,23 @@ export default class DestroyWoodTask extends BaseTask {
       }
     );
     const destinationNode = sortedInOrderVisitedArray[0];
+    console.log('destinationNode', destinationNode);
+    if (!destinationNode) {
+      // open road
+      const tempGrid = createGrid(map, player.currentPosition, spoils, bombs, players);
+      // console.log('wood nodes', grid.flat().filter(node => node.value === WOOD_NODE).map(node => node?.row + '|' + node?.col));
+      const inOderVisitedArray = dijktra(tempGrid, [...CAN_GO_NODES, WOOD_NODE, BOMB_AFFECTED_NODE], undefined, grid.flat().filter(node => node.value === WOOD_NODE));
+      const destination = getDestinationNode(inOderVisitedArray);
+      console.log('closest node for cluster', destination?.row, destination?.col);
+      this.pause();
+      mainTaskStackSubject.next({
+        action: IMainStackAction.ADD,
+        params: {
+          taskName: "open-road",
+          singleTarget: destination
+        },
+      });
+    }
     const destinationNodeWithoutBomb = sortedInOrderVisitedArrayWithoutBomb[0];
     if (destinationNodeWithoutBomb && destinationNode && (destinationNodeWithoutBomb.col !== destinationNode.col || destinationNodeWithoutBomb.row !== destinationNode.row)) {
       if (destinationNodeWithoutBomb.distance - destinationNode.distance > 8) {
@@ -207,6 +229,10 @@ export default class DestroyWoodTask extends BaseTask {
     }
   };
 
+  isThereWayToDestroyLand = (map: IMapInfo, landPositions: IPosition[]) => {
+    
+  }
+
   destroyWoodTaskObserver = (mapInfo: IMapInfo) => {
     if (
       this.taskState !== ITaskState.RUNNING &&
@@ -232,10 +258,12 @@ export default class DestroyWoodTask extends BaseTask {
     // }
     if (!this.bestLand) {
       const landSeaRawGrid = getLandSeaRawGrid(map);
-      const bestLand = getBestLand(landSeaRawGrid);
+      const { bestLand, closestNode } = getBestLand(mapInfo, landSeaRawGrid);
       this.bestLand = bestLand;
+      this.closestNode = closestNode;
     }
-    if (this.bestLand) {
+    if (this.bestLand && this.closestNode) {
+      // if ()
       this.destroyLand(mapInfo);
     }
     // const isPlayerInBestLand =

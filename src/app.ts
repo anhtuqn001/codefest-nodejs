@@ -40,8 +40,9 @@ import destroywoodAdviser from "./advisers/destroy-wood-adviser";
 import GoToAndPlaceBombTask from "./tasks/go-to-and-place-boom";
 import killTargetAdviser from "./advisers/kill-target-adviser";
 import KillTarget from "./tasks/kill-target";
+import OpenRoad from "./tasks/open-road";
 
-const targetServer = "http://localhost";
+const targetServer = "http://172.20.10.4";
 
 const app = express();
 const port = 3000;
@@ -59,10 +60,20 @@ app.get("/", function (req, res) {
 app.post("/:action", function (req, res) {
   // socket.emit("drive player", { direction: req?.params?.action });
   if (req?.params?.action === 'v') {
+    // mainTaskStackSubject.next({
+    //   action: IMainStackAction.ADD,
+    //   params: {
+    //     taskName: "place-bomb-task",
+    //   },
+    // });
     mainTaskStackSubject.next({
       action: IMainStackAction.ADD,
       params: {
-        taskName: "place-bomb-task",
+        taskName: "destroy-wood",
+        singleTarget: {
+          row: 10,
+          col: 18
+        }
       },
     });
   } else {
@@ -105,7 +116,7 @@ export const mainTaskStackSubject = new BehaviorSubject<{
   params?: {
     taskName?: string;
     target?: TNodeValue[] | IPosition[];
-    singleTarget?: INode;
+    singleTarget?: INode | IPosition;
     comeToNextToPosition?: boolean;
     taskId?: string;
   };
@@ -133,10 +144,14 @@ mainTaskStackSubject.subscribe((mainStackBehavior) => {
           task = new DestroyWoodTask(globalSubject);
         }
         if(params?.taskName === "go-to-and-place-bomb" && params.singleTarget) {
-          task = new GoToAndPlaceBombTask(globalSubject, params.singleTarget);
+
+          task = new GoToAndPlaceBombTask(globalSubject, params.singleTarget as INode);
         }
         if(params?.taskName === "kill-target") {
           mainTaskStack.addNewTask(new KillTarget(globalSubject));
+        }
+        if(params?.taskName === "open-road") {
+          mainTaskStack.addNewTask(new OpenRoad(globalSubject, params.singleTarget as IPosition));
         }
         if (task) {
           mainTaskStack.addNewTask(task);

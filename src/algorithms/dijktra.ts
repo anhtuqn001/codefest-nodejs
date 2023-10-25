@@ -1,4 +1,4 @@
-import { BOMB_AFFECTED_NODE, NORMAL_NODE, STONE_NODE } from "../constants";
+import { BOMB_AFFECTED_NODE, NORMAL_NODE, STONE_NODE, WOOD_NODE } from "../constants";
 import { IGrid, INode, IPosition, TNodeValue } from "../types/node";
 import { getStartNodeFromGrid, isPositionNodes, isValueNodes } from "./bredth-first-search";
 
@@ -69,7 +69,7 @@ function sortUnvisitedArray(unvisitedArray: INode[]) {
 function updateNeighBorNodes(node: INode, grid: IGrid) {
     const neighbors = getUnvisitedNeighbors(node, grid);
     for(const neighbor of neighbors) {
-        if(neighbor.value === BOMB_AFFECTED_NODE){
+        if(neighbor.value === BOMB_AFFECTED_NODE || neighbor.value === WOOD_NODE){
             neighbor.distance = node.distance + 3;    
         } 
         else {

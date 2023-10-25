@@ -71,7 +71,7 @@ export default class PlaceBombTask extends BaseTask {
   };
 
   escapeFromBomb = (player: IPlayer, mapInfo: IMapInfo) => {
-    // console.log('escapeddd');
+    
     const { map, spoils, bombs, players } = mapInfo;
     const nodeGrid = createGridToAvoidBomb(
       map,
@@ -80,7 +80,6 @@ export default class PlaceBombTask extends BaseTask {
       bombs,
       players
     );
-    // console.log('player current position', player.currentPosition.row, player.currentPosition.col)
     // nodeGrid[player.currentPosition.row][player.currentPosition.row].value =
     //   NORMAL_NODE;
     const inOrderVisitedArray = dijktra(
@@ -90,10 +89,13 @@ export default class PlaceBombTask extends BaseTask {
       CAN_GO_NODES
     );
     const destinationNode = getDestinationNode(inOrderVisitedArray);
-    // console.log('escape destinationNode', destinationNode?.row, destinationNode?.col, destinationNode?.value);
+    console.log('place-bom player current position', player.currentPosition.row + "|" + player.currentPosition.col)
+    console.log('place-bom escaping bombs', bombs)
+    console.log('place-bom escaping destinationNode', destinationNode?.row + '|' + destinationNode?.col)
     if (destinationNode) {
       if (player.currentPosition.row !== destinationNode.row || player.currentPosition.col !== destinationNode.col) {
         const shortestPath = getShortestPath(destinationNode);
+        console.log('place-bom shortestPath', shortestPath.map(node => node.row + '|' + node.col));
         const stringToShortestPath = getStringPathFromShortestPath(
           player.currentPosition,
           shortestPath
@@ -102,11 +104,9 @@ export default class PlaceBombTask extends BaseTask {
           this.escapingDestination = { row: destinationNode.row, col: destinationNode.col};
         }
         if (stringToShortestPath) {
-          // console.log('emitted', stringToShortestPath);
           socket.emit("drive player", { direction: stringToShortestPath });
         }
       } else {
-        // console.log('stopped');
         this.stop(this.id);
         return
       }
@@ -158,7 +158,6 @@ export default class PlaceBombTask extends BaseTask {
       this.bombPlaced && bombs.find(b => b.col === this.bombPlaced?.col && b.row === this.bombPlaced.row)
     ) {
       if (isPlayerIsInDangerousArea(players, bombs, nodeGrid)) {
-        // console.log('escapeeeeeee');
         this.escapeFromBomb(player, mapInfo)
         return;
       }

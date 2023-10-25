@@ -12,12 +12,13 @@ export const START_BOMB_AFFECTED_NODE = 11;
 export const PRISON_NODE = 4;
 export const OPPONENT_NODE = 12;
 export const DANGEROUS_BOMB_AFFECTED_NODE = 13;
+export const BOMB_NODE = 14;
 
 
-export const GAME_ID = "ae0cbd1f-60fb-45df-9e42-ed32148f4c7c"; 
-export const PLAYER_ID = "player1-xxx";
+export const GAME_ID = "62f191c8-089f-4d6b-a5c7-b0d0000ee40c"; 
+export const PLAYER_ID = "player2-xxx";
 
-export const CANNOT_GO_NODE = [STONE_NODE, WOOD_NODE, BOMB_AFFECTED_NODE, MYS_EGG_NODE, EGG_NODE, OPPONENT_NODE, HOLE_NODE];
+export const CANNOT_GO_NODE = [STONE_NODE, WOOD_NODE, BOMB_AFFECTED_NODE, MYS_EGG_NODE, EGG_NODE, OPPONENT_NODE, HOLE_NODE, BOMB_NODE];
 export const CAN_GO_NODES = [NORMAL_NODE, DELAY_EGG_NODE, SPEED_EGG_NODE, POWER_EGG_NODE];
 
 

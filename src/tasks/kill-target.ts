@@ -38,7 +38,6 @@ export default class KillTarget extends BaseTask {
         return;
     }
     if (!mapInfo) return;
-    if (!mapInfo) return;
     const { players, bombs, map, spoils, tag, dragonEggGSTArray } = mapInfo;
     const player = getPlayer(players);
     if (!player) return;

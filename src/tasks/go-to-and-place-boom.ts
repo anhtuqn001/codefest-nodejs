@@ -53,7 +53,7 @@ export default class GoToAndPlaceBombTask extends BaseTask {
   }
 
   escapeFromBomb = (player: IPlayer, mapInfo: IMapInfo) => {
-    console.log('escaping GoToAndPlaceBombTask');
+    console.log('go-to-and-place-bom escaping');
     const { map, spoils, bombs, players } = mapInfo;
     const nodeGrid = createGridToAvoidBomb(
       map,
@@ -62,7 +62,6 @@ export default class GoToAndPlaceBombTask extends BaseTask {
       bombs,
       players
     );
-    // console.log('player current position', player.currentPosition.row, player.currentPosition.col)
     // nodeGrid[player.currentPosition.row][player.currentPosition.row].value =
     //   NORMAL_NODE;
     const inOrderVisitedArray = dijktra(
@@ -72,7 +71,6 @@ export default class GoToAndPlaceBombTask extends BaseTask {
       CAN_GO_NODES
     );
     const destinationNode = getDestinationNode(inOrderVisitedArray);
-    // console.log('escapeFromBomb destinationNode', destinationNode?.row, destinationNode?.col, destinationNode?.value);
     if (destinationNode) {
       if (player.currentPosition.row !== destinationNode.row || player.currentPosition.col !== destinationNode.col) { 
         const shortestPath = getShortestPath(destinationNode);
@@ -148,7 +146,6 @@ export default class GoToAndPlaceBombTask extends BaseTask {
     let destinationNode = getDestinationNode(inOrderVisitedArray);
     if (!destinationNode) {
       if (isPlayerIsInDangerousArea(players, bombs, nodeGrid)) {
-        // console.log('escaped');
         this.escapeFromBomb(player, mapInfo);
         return;
       } else {
