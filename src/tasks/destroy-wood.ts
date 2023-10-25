@@ -49,7 +49,7 @@ export default class DestroyWoodTask extends BaseTask {
   firstRendered: boolean = false;
   passedNodes: IBestLandType = {};
   lastDestinationNode: INode | undefined = undefined;
-  destinationNodeWithoutBomb: INode | undefined = undefined;
+  // destinationNodeWithoutBomb: INode | undefined = undefined;
   constructor(globalSubject: IGloBalSubject) {
     super(globalSubject);
     this.thiz = this;
@@ -99,11 +99,11 @@ export default class DestroyWoodTask extends BaseTask {
     const { map, players, spoils, bombs, tag, player_id } = mapInfo;
     const player = getPlayer(players);
     if (!player || !this.bestLand) return;
-    if (tag === 'bomb:explosed' && this.destinationNodeWithoutBomb && player_id === PLAYER_ID) {
-      this.destinationNodeWithoutBomb = undefined;
-    }
-    if (this.destinationNodeWithoutBomb) return;
-    const grid = createDestroyWoodGrid(
+    // if (tag === 'bomb:explosed' && this.destinationNodeWithoutBomb && player_id === PLAYER_ID) {
+    //   this.destinationNodeWithoutBomb = undefined;
+    // }
+    // if (this.destinationNodeWithoutBomb) return;
+    const { grid, bombsAreaRemainingTime } = createDestroyWoodGrid(
       map,
       player.currentPosition,
       bombs,
@@ -123,17 +123,18 @@ export default class DestroyWoodTask extends BaseTask {
 
     const inOrderVisitedArray = breadthFirstSearchWithScore(
       grid,
-      player.power,
+      player,
+      bombsAreaRemainingTime,
       [...CAN_GO_NODES, BOMB_AFFECTED_NODE],
       undefined
     );
 
-    const inOrderVisitedArrayWithoutBomb = breadthFirstSearchWithScore(
-      gridWithoutBomb,
-      player.power,
-      CAN_GO_NODES,
-      undefined
-    );
+    // const inOrderVisitedArrayWithoutBomb = breadthFirstSearchWithScore(
+    //   gridWithoutBomb,
+    //   player.power,
+    //   CAN_GO_NODES,
+    //   undefined
+    // );
 
     const filteredInOrderVisitedArray = inOrderVisitedArray.filter((node) => {
       if (node?.score === undefined || node?.score === null) return true;
@@ -144,38 +145,39 @@ export default class DestroyWoodTask extends BaseTask {
       (a: INode, b: INode) => {
         if (b?.score !== undefined && a?.score !== undefined) {
           return (
-            b?.score -
-            b.distance / STEP_BOMB_RATIO -
+            (b?.score -
+              b.distance / STEP_BOMB_RATIO) -
             (a?.score - a.distance / STEP_BOMB_RATIO)
           );
+          // return b.score - a.score;
         }
         return 0;
       }
     );
 
-    const sortedInOrderVisitedArrayWithoutBomb = inOrderVisitedArrayWithoutBomb.filter((node) => {
-      if (node?.score === undefined || node?.score === null) return true;
-      if (node?.score > 0) {
-        return true;
-      } else {
-        return false;
-      }
-    }).sort(
-      (a: INode, b: INode) => {
-        if (b?.score !== undefined && a?.score !== undefined) {
-          return (
-            b?.score -
-            b.distance / STEP_BOMB_RATIO -
-            (a?.score - a.distance / STEP_BOMB_RATIO)
-          );
-        }
-        return 0;
-      }
-    );
+    // const sortedInOrderVisitedArrayWithoutBomb = inOrderVisitedArrayWithoutBomb.filter((node) => {
+    //   if (node?.score === undefined || node?.score === null) return true;
+    //   if (node?.score > 0) {
+    //     return true;
+    //   } else {
+    //     return false;
+    //   }
+    // }).sort(
+    //   (a: INode, b: INode) => {
+    //     if (b?.score !== undefined && a?.score !== undefined) {
+    //       return (
+    //         b?.score -
+    //         b.distance / STEP_BOMB_RATIO -
+    //         (a?.score - a.distance / STEP_BOMB_RATIO)
+    //       );
+    //     }
+    //     return 0;
+    //   }
+    // );
     const destinationNode = sortedInOrderVisitedArray[0];
     if (!destinationNode) {
       // open road
-      const tempGrid = createGrid(map, player.currentPosition, spoils, bombs, players);
+      const { grid: tempGrid } = createGrid(map, player.currentPosition, spoils, bombs, players);
       // console.log('wood nodes', grid.flat().filter(node => node.value === WOOD_NODE).map(node => node?.row + '|' + node?.col));
       const inOderVisitedArray = dijktra(tempGrid, [...CAN_GO_NODES, WOOD_NODE, BOMB_AFFECTED_NODE], undefined, grid.flat().filter(node => node.value === WOOD_NODE));
       const destination = getDestinationNode(inOderVisitedArray);
@@ -188,12 +190,12 @@ export default class DestroyWoodTask extends BaseTask {
         },
       });
     }
-    const destinationNodeWithoutBomb = sortedInOrderVisitedArrayWithoutBomb[0];
-    if (destinationNodeWithoutBomb && destinationNode && (destinationNodeWithoutBomb.col !== destinationNode.col || destinationNodeWithoutBomb.row !== destinationNode.row)) {
-      if (destinationNodeWithoutBomb.distance - destinationNode.distance > 8) {
-        this.destinationNodeWithoutBomb = destinationNodeWithoutBomb;
-      }
-    }
+    // const destinationNodeWithoutBomb = sortedInOrderVisitedArrayWithoutBomb[0];
+    // if (destinationNodeWithoutBomb && destinationNode && (destinationNodeWithoutBomb.col !== destinationNode.col || destinationNodeWithoutBomb.row !== destinationNode.row)) {
+    //   if (destinationNodeWithoutBomb.distance - destinationNode.distance > 8) {
+    //     this.destinationNodeWithoutBomb = destinationNodeWithoutBomb;
+    //   }
+    // }
     if (destinationNode && destinationNode.score !== 0) {
       this.pause();
       this.lastDestinationNode = destinationNode;

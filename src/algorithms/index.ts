@@ -2,6 +2,7 @@ import {
   BOMB_AFFECTED_NODE,
   CAN_GO_NODES,
   EGG_NODE,
+  EGG_SPEED_MAPPING,
   NEAR_BY_PLAYER_AREA_LAYER,
   NODE_SPOIL_TYPE_MAPPING,
   PLAYER_ID,
@@ -338,7 +339,13 @@ export const getBestLand = (mapInfo: IMapInfo ,landSeaRawGrid: IRawGrid): {
   if (!landSeaRawGrid) return {
     bestLand: undefined,
     closestNode: undefined
-  };;
+  };
+  const { players } = mapInfo;
+  const player = getPlayer(players);
+  if (!player) return {
+    bestLand: undefined,
+    closestNode: undefined
+  }
   const landSeaGrid = createLandSeaGrid(landSeaRawGrid);
   let landsObject: {[key: string]: string[]} = {}
   let closestNodesObject: {[key: string]: INode} = {};
@@ -346,7 +353,7 @@ export const getBestLand = (mapInfo: IMapInfo ,landSeaRawGrid: IRawGrid): {
     for (let j = 0; j < landSeaGrid[i].length; j++) {
       if (!landSeaGrid[i][j].isVisited && landSeaGrid[i][j].value !== 0) {
         landSeaGrid[i][j].isStart = true;
-        const inOrderVisitedArray = breadthFirstSearch(landSeaGrid, undefined, [
+        const inOrderVisitedArray = breadthFirstSearch(landSeaGrid, player, undefined ,undefined, [
           0,
         ]);
         landSeaGrid[i][j].isStart = false;
@@ -401,7 +408,7 @@ export const findNearestPositionOfBestLand = (mapInfo: IMapInfo, coordinateCombo
   const { map, bombs, players, spoils } = mapInfo;
   const player = getPlayer(players);
   if (!player) return undefined;
-  const grid = createGrid(map, player?.currentPosition, spoils, bombs, players);
+  const { grid } = createGrid(map, player?.currentPosition, spoils, bombs, players);
   const bestLandPositions = coordinateCombosInArea.map(item => {
     const arrayConverted = item.split("|")
     return {
@@ -437,4 +444,13 @@ export const isSamePosition = (node1: IPosition, node2: IPosition) => {
 
 export const isPositionHaveBomb = (position: IPosition, bombs: IBomb[]) => {
   return !!bombs.find(bomb => bomb.row === position.row && bomb.col === position.col)
+}
+
+export const getSpeed = (player: IPlayer) => {
+  const speed = EGG_SPEED_MAPPING[player.dragonEggSpeed.toString()];
+  return speed;
+}
+
+export const getTimeForPlayerToNode = (player: IPlayer, node: INode) => {
+  return node.distance * getSpeed(player);
 }

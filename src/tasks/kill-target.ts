@@ -48,7 +48,7 @@ export default class KillTarget extends BaseTask {
 
     
     if (!this.target) return;
-    const grid = createGrid(
+    const { grid } = createGrid(
         map,
         player.currentPosition,
         spoils,

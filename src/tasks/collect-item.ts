@@ -49,13 +49,13 @@ export default class CollectItemTask extends BaseTask {
 
         const bombsWithPower = getMappedBombWithPower(bombs, players);
         const playerAreaGrid = getBombItemPlayerAreaRawGrid(map, player.currentPosition, bombsWithPower);
-        const playerAreaGridNode = createGrid(playerAreaGrid, player.currentPosition, spoils, bombs, players);
+        const { grid: playerAreaGridNode } = createGrid(playerAreaGrid, player.currentPosition, spoils, bombs, players);
         const itemsToCollect = playerAreaGridNode.flat().filter(node => GOOD_EGG_NODES.includes(node.value));
         
         let previousDestinationNode: INode | null = null;
         let shortestPath: INode[] = [];
         for (let i = 0; i <= itemsToCollect.length - 1; i++) {
-          const inOrderVisitedArray = breadthFirstSearch(playerAreaGridNode, undefined, CANNOT_GO_NODE, GOOD_EGG_NODES);
+          const inOrderVisitedArray = breadthFirstSearch(playerAreaGridNode, player, undefined, undefined, CANNOT_GO_NODE, GOOD_EGG_NODES);
           let destinationNode = getDestinationNode(inOrderVisitedArray);
           if (destinationNode?.isDestination) {
             previousDestinationNode = destinationNode;

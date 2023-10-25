@@ -57,6 +57,8 @@ app.get("/", function (req, res) {
   res.send("Hello world!");
 });
 
+let startTime: number = 0;
+
 app.post("/:action", function (req, res) {
   // socket.emit("drive player", { direction: req?.params?.action });
   if (req?.params?.action === 'v') {
@@ -66,16 +68,18 @@ app.post("/:action", function (req, res) {
     //     taskName: "place-bomb-task",
     //   },
     // });
-    mainTaskStackSubject.next({
-      action: IMainStackAction.ADD,
-      params: {
-        taskName: "destroy-wood",
-        singleTarget: {
-          row: 10,
-          col: 18
-        }
-      },
-    });
+    // mainTaskStackSubject.next({
+    //   action: IMainStackAction.ADD,
+    //   params: {
+    //     taskName: "destroy-wood",
+    //     singleTarget: {
+    //       row: 10,
+    //       col: 18
+    //     }
+    //   },
+    // });
+    startTime = Date.now();
+    socket.emit("drive player", { direction: '11111' });
   } else {
     socket.emit("drive player", { direction: req?.params?.action });
   }
@@ -255,6 +259,10 @@ socket.on("ticktack player", (res) => {
     })
   }
   const player = getPlayer(players);
+  if (player?.currentPosition.row === 12 && player?.currentPosition.col === 5) {
+    console.log(Date.now() - startTime)
+  }
+  // console.log('player', player?.speed);
   if (player?.lives) {
     if (player?.lives - preLives < 0) {
       console.log('woundedddddddddddddddddddddddddddddddddddddddddddddddddddddddddd');

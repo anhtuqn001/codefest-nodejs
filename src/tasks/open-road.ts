@@ -57,7 +57,7 @@ export default class OpenRoad extends BaseTask {
         return;
     }
 
-    const nodeGrid = createGrid(
+    const { grid: nodeGrid } = createGrid(
         map,
         player.currentPosition,
         spoils,

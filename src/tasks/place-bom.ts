@@ -62,6 +62,8 @@ export default class PlaceBombTask extends BaseTask {
     const nodeGrid = createBombGridV2(map, startNode, bombs, players, spoils);
     const inOrderVisitedArray = breadthFirstSearch(
       nodeGrid,
+      player,
+      undefined,
       [START_BOMB_AFFECTED_NODE, ...CAN_GO_NODES],
       undefined,
       [NORMAL_NODE]
@@ -137,7 +139,7 @@ export default class PlaceBombTask extends BaseTask {
       socket.emit("drive player", { direction: stringPath });
       return;
     }
-    const nodeGrid = createGrid(
+    const { grid: nodeGrid} = createGrid(
       map,
       player.currentPosition,
       spoils,

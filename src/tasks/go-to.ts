@@ -112,10 +112,12 @@ export default class GoToTask extends BaseTask {
     }
     if (this.movingOn) return;
     if (emittedPlaceBomb) return;
-    const nodeGrid = createGrid(map, player.currentPosition, spoils, bombs, players);
+    const { grid: nodeGrid } = createGrid(map, player.currentPosition, spoils, bombs, players);
 
     const inOrderVisitedArray = breadthFirstSearch(
       nodeGrid,
+      player,
+      undefined,
       undefined,
       [STONE_NODE, MYS_EGG_NODE, OPPONENT_NODE, BOMB_AFFECTED_NODE],
       this.nodeValueNeedToGo

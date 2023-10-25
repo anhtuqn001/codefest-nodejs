@@ -128,7 +128,7 @@ export default class GoToAndPlaceBombTask extends BaseTask {
       this.stop(this.id);
       return;
     }
-    const nodeGrid = createGrid(
+    const { grid: nodeGrid, bombsAreaRemainingTime } = createGrid(
       map,
       player.currentPosition,
       spoils,
@@ -139,6 +139,8 @@ export default class GoToAndPlaceBombTask extends BaseTask {
 
     const inOrderVisitedArray = breadthFirstSearch(
       nodeGrid,
+      player,
+      bombsAreaRemainingTime,
       CAN_GO_NODES,
       undefined
     );
