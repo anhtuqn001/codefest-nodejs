@@ -15,8 +15,8 @@ export const DANGEROUS_BOMB_AFFECTED_NODE = 13;
 export const BOMB_NODE = 14;
 
 
-export const GAME_ID = "b2f07069-47b5-4834-a7d7-46327ece3328"; 
-export const PLAYER_ID = "player1-xxx";
+export const GAME_ID = "3f0e4c59-3211-4837-9a7e-4224d86bb8f6"; 
+export const PLAYER_ID = "player2-xxx";
 
 export const CANNOT_GO_NODE = [STONE_NODE, WOOD_NODE, BOMB_AFFECTED_NODE, MYS_EGG_NODE, EGG_NODE, OPPONENT_NODE, HOLE_NODE, BOMB_NODE];
 export const CAN_GO_NODES = [NORMAL_NODE, DELAY_EGG_NODE, SPEED_EGG_NODE, POWER_EGG_NODE];
@@ -33,7 +33,7 @@ export const NODE_SPOIL_TYPE_MAPPING: {[key: string]: number} = {
 
 export const GOOD_EGG_NODES = [POWER_EGG_NODE, DELAY_EGG_NODE, SPEED_EGG_NODE]
 
-export const STEP_BOMB_RATIO = 6;
+export const STEP_BOMB_RATIO = 8;
 
 export const SAFE_BOMB_TIME = 1200;
 

@@ -10,7 +10,6 @@ import {
   createGridToAvoidBomb,
   getShortestPath,
 } from "../algorithms/bredth-first-search";
-import dijktra from "../algorithms/dijktra";
 import { mainTaskStackSubject, socket } from "../app";
 import { BOMB_AFFECTED_NODE, CAN_GO_NODES, GOOD_EGG_NODES, NORMAL_NODE, POWER_EGG_NODE } from "../constants";
 import {
@@ -53,9 +52,8 @@ export default class GoToAndPlaceBombTask extends BaseTask {
   }
 
   escapeFromBomb = (player: IPlayer, mapInfo: IMapInfo) => {
-    console.log('go-to-and-place-bom escaping');
     const { map, spoils, bombs, players } = mapInfo;
-    const nodeGrid = createGridToAvoidBomb(
+    const { grid: nodeGrid, bombsAreaRemainingTime} = createGridToAvoidBomb(
       map,
       player.currentPosition,
       spoils,
@@ -64,8 +62,10 @@ export default class GoToAndPlaceBombTask extends BaseTask {
     );
     // nodeGrid[player.currentPosition.row][player.currentPosition.row].value =
     //   NORMAL_NODE;
-    const inOrderVisitedArray = dijktra(
+    const inOrderVisitedArray = breadthFirstSearch(
       nodeGrid,
+      player,
+      bombsAreaRemainingTime,
       [...CAN_GO_NODES, BOMB_AFFECTED_NODE],
       undefined,
       CAN_GO_NODES
@@ -136,15 +136,13 @@ export default class GoToAndPlaceBombTask extends BaseTask {
       players,
       this.destinationPosition
     );
-
     const inOrderVisitedArray = breadthFirstSearch(
       nodeGrid,
       player,
       bombsAreaRemainingTime,
-      CAN_GO_NODES,
+      [...CAN_GO_NODES, BOMB_AFFECTED_NODE],
       undefined
     );
-
     let destinationNode = getDestinationNode(inOrderVisitedArray);
     if (!destinationNode) {
       if (isPlayerIsInDangerousArea(players, bombs, nodeGrid)) {

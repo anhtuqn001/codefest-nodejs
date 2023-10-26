@@ -16,6 +16,7 @@ import {
   DANGEROUS_BOMB_AFFECTED_NODE,
   DELAY_EGG_NODE,
   EGG_NODE,
+  NEAR_BY_PLAYER_AREA_LAYER,
   NODE_SPOIL_TYPE_MAPPING,
   NORMAL_NODE,
   OPPONENT_NODE,
@@ -74,6 +75,9 @@ export const breadthFirstSearch = (
           bombsAreaRemainingTime[getCoordinateComboKey(node.row, node.col)] -
             TIME_FOR_PLACE_BOMB_AND_RUN
       ) {
+        console.log('node.distance', node.distance);
+        console.log('getTimeForPlayerToNode(player, node)', getTimeForPlayerToNode(player, node))
+        console.log('bombsAreaRemainingTime - TIME', bombsAreaRemainingTime[getCoordinateComboKey(node.row, node.col)] - TIME_FOR_PLACE_BOMB_AND_RUN);
         return false;
       }
       return true;
@@ -274,35 +278,21 @@ export const createGrid = (
       //       keyValueSpoils[getCoordinateComboKey(rowIndex, colIndex)].toString()
       //     ]
       //   : rawGrid[rowIndex][colIndex];
+      if (keyValueSpoils[getCoordinateComboKey(rowIndex, colIndex)]) {
+        value =
+          NODE_SPOIL_TYPE_MAPPING[
+            keyValueSpoils[getCoordinateComboKey(rowIndex, colIndex)].toString()
+          ];
+      }
       if (CAN_GO_NODES.includes(value)) {
         if (isBombAffectedNode) {
-          if (
-            bombsAreaRemainingTime[
-              getCoordinateComboKey(rowIndex, colIndex)
-            ] !== undefined
-          ) {
-            if (
-              bombsAreaRemainingTime[
-                getCoordinateComboKey(rowIndex, colIndex)
-              ] < SAFE_BOMB_TIME
-            ) {
-              value = DANGEROUS_BOMB_AFFECTED_NODE;
-            } else {
-              value = BOMB_AFFECTED_NODE;
-            }
-          }
+          value = BOMB_AFFECTED_NODE;
         }
         if (
           isPositionHaveBomb({ row: rowIndex, col: colIndex }, bombsWithPower)
         ) {
           value = BOMB_NODE;
         }
-      }
-      if (keyValueSpoils[getCoordinateComboKey(rowIndex, colIndex)]) {
-        value =
-          NODE_SPOIL_TYPE_MAPPING[
-            keyValueSpoils[getCoordinateComboKey(rowIndex, colIndex)].toString()
-          ];
       }
       if (
         opponent?.currentPosition.row === rowIndex &&
@@ -328,8 +318,11 @@ export const createGridToAvoidBomb = (
   bombs: IBomb[],
   players: IPlayer[],
   endNode?: IPosition | undefined
-): IGrid => {
-  if (!startNode) return [];
+) => {
+  if (!startNode) return {
+    grid: [],
+    bombsAreaRemainingTime: {}
+  };
   const grid: IGrid = [];
   const numberOfRow = rawGrid.length;
   const numberOfCol = rawGrid[0].length;
@@ -356,28 +349,30 @@ export const createGridToAvoidBomb = (
         endNode && rowIndex == endNode.row && colIndex == endNode.col
           ? true
           : false;
-      let value = keyValueSpoils[getCoordinateComboKey(rowIndex, colIndex)]
-        ? NODE_SPOIL_TYPE_MAPPING[
+      const isBombAffectedNode =
+          bombs?.length > 0
+            ? bombsAreaMap[rowIndex.toString()] &&
+              bombsAreaMap[rowIndex.toString()].includes(colIndex)
+            : false;
+      let value = rawGrid[rowIndex][colIndex];
+      if (keyValueSpoils[getCoordinateComboKey(rowIndex, colIndex)]) {
+        value =
+          NODE_SPOIL_TYPE_MAPPING[
             keyValueSpoils[getCoordinateComboKey(rowIndex, colIndex)].toString()
-          ]
-        : rawGrid[rowIndex][colIndex];
-      if (
-        bombsAreaMap[rowIndex.toString()] &&
-        bombsAreaMap[rowIndex.toString()].includes(colIndex) &&
-        !CANNOT_GO_NODE.filter(
-          (value) => value !== BOMB_AFFECTED_NODE
-        ).includes(value)
-      ) {
-        if (
-          bombsAreaRemainingTime[getCoordinateComboKey(rowIndex, colIndex)] !==
-            undefined &&
-          bombsAreaRemainingTime[getCoordinateComboKey(rowIndex, colIndex)] <
-            700
-        ) {
-          value = DANGEROUS_BOMB_AFFECTED_NODE;
-        } else {
+          ];
+      }
+      if (CAN_GO_NODES.includes(value)) {
+        if (isBombAffectedNode) {
           value = BOMB_AFFECTED_NODE;
         }
+        if (
+          isPositionHaveBomb({ row: rowIndex, col: colIndex }, bombsWithPower)
+        ) {
+          value = BOMB_NODE;
+        }
+        if (rowIndex === startNode.row && colIndex === startNode.col && value === BOMB_NODE) {
+          value = BOMB_AFFECTED_NODE;
+        } 
       }
       if (
         opponent?.currentPosition.row === rowIndex &&
@@ -395,7 +390,10 @@ export const createGridToAvoidBomb = (
   ) {
     grid[startNode.row][startNode.col].value = BOMB_AFFECTED_NODE;
   }
-  return grid;
+  return {
+    grid,
+    bombsAreaRemainingTime
+  };
 };
 
 export const createGridForPlaceBomb = (
@@ -644,6 +642,12 @@ export const createDestroyWoodGrid = (
             bombsAreaMap[rowIndex.toString()].includes(colIndex)
           : false;
       let value = rawGrid[rowIndex][colIndex];
+      if (keyValueSpoils[getCoordinateComboKey(rowIndex, colIndex)]) {
+        value =
+          NODE_SPOIL_TYPE_MAPPING[
+            keyValueSpoils[getCoordinateComboKey(rowIndex, colIndex)].toString()
+          ];
+      }
       if (CAN_GO_NODES.includes(value)) {
         if (isBombAffectedNode) {
           // if (bombsAreaRemainingTime[getCoordinateComboKey(rowIndex, colIndex)] !== undefined) {
@@ -662,19 +666,15 @@ export const createDestroyWoodGrid = (
           value = BOMB_NODE;
         }
       }
-      if (keyValueSpoils[getCoordinateComboKey(rowIndex, colIndex)]) {
-        value =
-          NODE_SPOIL_TYPE_MAPPING[
-            keyValueSpoils[getCoordinateComboKey(rowIndex, colIndex)].toString()
-          ];
-      }
       if (value === WOOD_NODE) {
+        const isNearByPlayer = Math.abs(startPosition.col - colIndex) < NEAR_BY_PLAYER_AREA_LAYER && Math.abs(startPosition.row - rowIndex) < NEAR_BY_PLAYER_AREA_LAYER;
         if (
           bestLand[getCoordinateComboKey(rowIndex, colIndex)] ||
           bestLand[getCoordinateComboKey(rowIndex + 1, colIndex)] ||
           bestLand[getCoordinateComboKey(rowIndex - 1, colIndex)] ||
           bestLand[getCoordinateComboKey(rowIndex, colIndex - 1)] ||
-          bestLand[getCoordinateComboKey(rowIndex, colIndex + 1)]
+          bestLand[getCoordinateComboKey(rowIndex, colIndex + 1)] ||
+          isNearByPlayer
         ) {
         } else {
           value = STONE_NODE;

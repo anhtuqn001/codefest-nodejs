@@ -353,7 +353,7 @@ export const getBestLand = (mapInfo: IMapInfo ,landSeaRawGrid: IRawGrid): {
     for (let j = 0; j < landSeaGrid[i].length; j++) {
       if (!landSeaGrid[i][j].isVisited && landSeaGrid[i][j].value !== 0) {
         landSeaGrid[i][j].isStart = true;
-        const inOrderVisitedArray = breadthFirstSearch(landSeaGrid, player, undefined ,undefined, [
+        const inOrderVisitedArray = breadthFirstSearch(landSeaGrid, player, undefined, undefined, [
           0,
         ]);
         landSeaGrid[i][j].isStart = false;
@@ -447,7 +447,8 @@ export const isPositionHaveBomb = (position: IPosition, bombs: IBomb[]) => {
 }
 
 export const getSpeed = (player: IPlayer) => {
-  const speed = EGG_SPEED_MAPPING[player.dragonEggSpeed.toString()];
+  const dragonEggSpeed = player.dragonEggSpeed > 2 ? 2 : player.dragonEggSpeed;
+  const speed = EGG_SPEED_MAPPING[dragonEggSpeed.toString()];
   return speed;
 }
 

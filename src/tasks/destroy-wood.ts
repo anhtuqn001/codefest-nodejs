@@ -95,7 +95,6 @@ export default class DestroyWoodTask extends BaseTask {
   // };
 
   destroyLand = (mapInfo: IMapInfo) => {
-    console.log('destroyLand');
     const { map, players, spoils, bombs, tag, player_id } = mapInfo;
     const player = getPlayer(players);
     if (!player || !this.bestLand) return;
@@ -178,7 +177,6 @@ export default class DestroyWoodTask extends BaseTask {
     if (!destinationNode) {
       // open road
       const { grid: tempGrid } = createGrid(map, player.currentPosition, spoils, bombs, players);
-      // console.log('wood nodes', grid.flat().filter(node => node.value === WOOD_NODE).map(node => node?.row + '|' + node?.col));
       const inOderVisitedArray = dijktra(tempGrid, [...CAN_GO_NODES, WOOD_NODE, BOMB_AFFECTED_NODE], undefined, grid.flat().filter(node => node.value === WOOD_NODE));
       const destination = getDestinationNode(inOderVisitedArray);
       this.pause();
@@ -197,6 +195,7 @@ export default class DestroyWoodTask extends BaseTask {
     //   }
     // }
     if (destinationNode && destinationNode.score !== 0) {
+      console.log('destroy-wood destinationNode', destinationNode.row + '|' + destinationNode.col);
       this.pause();
       this.lastDestinationNode = destinationNode;
       mainTaskStackSubject.next({

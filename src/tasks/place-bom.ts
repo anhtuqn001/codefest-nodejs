@@ -73,9 +73,9 @@ export default class PlaceBombTask extends BaseTask {
   };
 
   escapeFromBomb = (player: IPlayer, mapInfo: IMapInfo) => {
-    
+    console.log('place-bom escaping');
     const { map, spoils, bombs, players } = mapInfo;
-    const nodeGrid = createGridToAvoidBomb(
+    const {grid:nodeGrid, bombsAreaRemainingTime} = createGridToAvoidBomb(
       map,
       player.currentPosition,
       spoils,
@@ -84,20 +84,18 @@ export default class PlaceBombTask extends BaseTask {
     );
     // nodeGrid[player.currentPosition.row][player.currentPosition.row].value =
     //   NORMAL_NODE;
-    const inOrderVisitedArray = dijktra(
+    const inOrderVisitedArray = breadthFirstSearch(
       nodeGrid,
+      player,
+      bombsAreaRemainingTime,
       [...CAN_GO_NODES, BOMB_AFFECTED_NODE],
       undefined,
       CAN_GO_NODES
     );
     const destinationNode = getDestinationNode(inOrderVisitedArray);
-    console.log('place-bom player current position', player.currentPosition.row + "|" + player.currentPosition.col)
-    console.log('place-bom escaping bombs', bombs)
-    console.log('place-bom escaping destinationNode', destinationNode?.row + '|' + destinationNode?.col)
     if (destinationNode) {
       if (player.currentPosition.row !== destinationNode.row || player.currentPosition.col !== destinationNode.col) {
         const shortestPath = getShortestPath(destinationNode);
-        console.log('place-bom shortestPath', shortestPath.map(node => node.row + '|' + node.col));
         const stringToShortestPath = getStringPathFromShortestPath(
           player.currentPosition,
           shortestPath
