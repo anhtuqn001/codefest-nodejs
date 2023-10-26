@@ -25,11 +25,12 @@ import {
   createBombGridV2,
   createGrid,
   createGridForPlaceBomb,
+  createGridIfPlaceBombHere,
   createGridToAvoidBomb,
   getBombAffectedAreaMapV2,
   getShortestPath,
 } from "../algorithms/bredth-first-search";
-import { BOMB_AFFECTED_NODE, CAN_GO_NODES, DELAY_EGG_NODE, EGG_NODE, HOLE_NODE, MYS_EGG_NODE, NORMAL_NODE, POWER_EGG_NODE, SPEED_EGG_NODE, START_BOMB_AFFECTED_NODE, STONE_NODE, WOOD_NODE } from "../constants";
+import { BOMB_AFFECTED_NODE, CAN_GO_NODES, DELAY_EGG_NODE, EGG_NODE, HOLE_NODE, MYS_EGG_NODE, NORMAL_NODE, PLAYER_ID, POWER_EGG_NODE, SPEED_EGG_NODE, START_BOMB_AFFECTED_NODE, STONE_NODE, WOOD_NODE } from "../constants";
 import dijktra from "../algorithms/dijktra";
 
 export default class PlaceBombTask extends BaseTask {
@@ -72,8 +73,25 @@ export default class PlaceBombTask extends BaseTask {
     return destinationNode;
   };
 
+  shouldPlaceBombHere = (mapInfo: IMapInfo): boolean => {
+    const { players, map, spoils, bombs } = mapInfo;
+    const player = getPlayer(players);
+    if (!player) return false;
+    const currentPosition = player?.currentPosition;
+    bombs.push({
+      row: currentPosition.row,
+      col: currentPosition.col,
+      remainTime: 2000,
+      playerId: PLAYER_ID
+    })
+    const { grid: nodeGrid, bombsAreaRemainingTime } = createGridIfPlaceBombHere(map, player.currentPosition, spoils, bombs, players);
+    const inOrderVisitedArray = breadthFirstSearch(nodeGrid, player, bombsAreaRemainingTime, [...CAN_GO_NODES, BOMB_AFFECTED_NODE], undefined, CAN_GO_NODES);
+    const destinationNode = getDestinationNode(inOrderVisitedArray);
+    if (!destinationNode) return false;
+    return true;
+  }
+
   escapeFromBomb = (player: IPlayer, mapInfo: IMapInfo) => {
-    console.log('place-bom escaping');
     const { map, spoils, bombs, players } = mapInfo;
     const {grid:nodeGrid, bombsAreaRemainingTime} = createGridToAvoidBomb(
       map,
@@ -130,9 +148,12 @@ export default class PlaceBombTask extends BaseTask {
     const maxColNumber = map[0].length;
     const startPosition = player.currentPosition;
     if (!this.bombPlaced) {
+      if (!this.shouldPlaceBombHere(mapInfo)) {
+        this.stop(this.id);
+        return;
+      } 
       //place a bomb
       stringPath = stringPath + "b";
-
       this.bombPlaced = startPosition;
       socket.emit("drive player", { direction: stringPath });
       return;

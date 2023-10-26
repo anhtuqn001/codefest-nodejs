@@ -42,7 +42,7 @@ import killTargetAdviser from "./advisers/kill-target-adviser";
 import KillTarget from "./tasks/kill-target";
 import OpenRoad from "./tasks/open-road";
 
-const targetServer = "http://localhost";
+const targetServer = "http://localhost/";
 
 const app = express();
 const port = 3000;
@@ -81,6 +81,9 @@ app.post("/:action", function (req, res) {
     startTime = Date.now();
     socket.emit("drive player", { direction: '11111' });
   } else {
+    if (req?.params?.action === 'b') {
+      console.log('place bomb');
+    } 
     socket.emit("drive player", { direction: req?.params?.action });
   }
   res.send('success');
@@ -229,6 +232,8 @@ socket.on("join game", (res) => {
   console.log("[Socket] join-game responsed", res);
 });
 let preLives = 0;
+let isPreventing = false;
+let lastBombPlaced = 0;
 //API-2
 socket.on("ticktack player", (res) => {
   const map: IRawGrid = res?.map_info?.map ?? [];
@@ -238,6 +243,8 @@ socket.on("ticktack player", (res) => {
   const tag: ITag = res?.tag;
   const dragonEggGSTArray: IDragonEggGST[] = res?.map_info?.dragonEggGSTArray;
   const player_id: string = res?.player_id;
+  console.log('tag', tag);
+  // console.log('res', res);
   if (res?.map_info) {
     globalSubject.next({
       map,
@@ -259,9 +266,14 @@ socket.on("ticktack player", (res) => {
     })
   }
   const player = getPlayer(players);
-  if (player?.currentPosition.row === 12 && player?.currentPosition.col === 5) {
-    console.log(Date.now() - startTime)
-  }
+  // if (bombs.length > 0 && bombs.find((bomb) => bomb.remainTime === 0) && !isPreventing) {
+  //   lastBomb = Date.now();
+  //   isPreventing = true;
+  // }
+  // if (bombs.length === 0 && isPreventing) {
+  //   console.log('time bomb flash disapper', Date.now() - lastBomb);
+  //   isPreventing = false;
+  // }
   // console.log('player', player?.speed);
   if (player?.lives) {
     if (player?.lives - preLives < 0) {
@@ -283,6 +295,7 @@ socket.on("ticktack player", (res) => {
 socket.on("drive player", (res) => {
   // console.log("[Socket] drive-player responsed, res: ", res);
   const tasks = mainTaskStack.getAllTasks();
+  console.log('drive player res', res);
 
   // if (res.direction.includes('b') && res.player_id === PLAYER_ID && !tasks.some(t => t.name === 'collect-item')) {
   //   of("1")

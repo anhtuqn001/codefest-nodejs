@@ -75,9 +75,6 @@ export const breadthFirstSearch = (
           bombsAreaRemainingTime[getCoordinateComboKey(node.row, node.col)] -
             TIME_FOR_PLACE_BOMB_AND_RUN
       ) {
-        console.log('node.distance', node.distance);
-        console.log('getTimeForPlayerToNode(player, node)', getTimeForPlayerToNode(player, node))
-        console.log('bombsAreaRemainingTime - TIME', bombsAreaRemainingTime[getCoordinateComboKey(node.row, node.col)] - TIME_FOR_PLACE_BOMB_AND_RUN);
         return false;
       }
       return true;
@@ -229,6 +226,89 @@ const randomlyProvideNeighbors = (
 };
 
 export const createGrid = (
+  rawGrid: IRawGrid,
+  startNode: IPosition | undefined,
+  spoils: ISpoil[],
+  bombs: IBomb[],
+  players: IPlayer[],
+  endNode?: IPosition | undefined
+) => {
+  if (!startNode)
+    return {
+      grid: [],
+      bombsAreaRemainingTime: {},
+    };
+  const grid: IGrid = [];
+  const numberOfRow = rawGrid.length;
+  const numberOfCol = rawGrid[0].length;
+  const opponent = getOpponent(players);
+  const bombsWithPower = getMappedBombWithPower(bombs, players);
+  const { bombsAreaMap, bombsAreaRemainingTime } = getBombAffectedAreaMapV2(
+    bombsWithPower,
+    numberOfRow,
+    numberOfCol
+  );
+  const keyValueSpoils: { [key: string]: number } = {};
+  spoils?.forEach((spoil) => {
+    keyValueSpoils[getCoordinateComboKey(spoil.row, spoil.col)] =
+      spoil.spoil_type;
+  });
+  for (let rowIndex = 0; rowIndex < numberOfRow; rowIndex++) {
+    grid[rowIndex] = [];
+    for (let colIndex = 0; colIndex < numberOfCol; colIndex++) {
+      const isStart =
+        startNode && rowIndex == startNode.row && colIndex == startNode.col
+          ? true
+          : false;
+      const isDestination =
+        endNode && rowIndex == endNode.row && colIndex == endNode.col
+          ? true
+          : false;
+      const isBombAffectedNode =
+        bombs?.length > 0
+          ? bombsAreaMap[rowIndex.toString()] &&
+            bombsAreaMap[rowIndex.toString()].includes(colIndex)
+          : false;
+      let value = rawGrid[rowIndex][colIndex];
+      // let value = keyValueSpoils[getCoordinateComboKey(rowIndex, colIndex)]
+      //   ? NODE_SPOIL_TYPE_MAPPING[
+      //       keyValueSpoils[getCoordinateComboKey(rowIndex, colIndex)].toString()
+      //     ]
+      //   : rawGrid[rowIndex][colIndex];
+      if (keyValueSpoils[getCoordinateComboKey(rowIndex, colIndex)]) {
+        value =
+          NODE_SPOIL_TYPE_MAPPING[
+            keyValueSpoils[getCoordinateComboKey(rowIndex, colIndex)].toString()
+          ];
+      }
+      if (CAN_GO_NODES.includes(value)) {
+        if (isBombAffectedNode) {
+          value = BOMB_AFFECTED_NODE;
+        }
+        if (
+          isPositionHaveBomb({ row: rowIndex, col: colIndex }, bombsWithPower)
+        ) {
+          value = BOMB_NODE;
+        }
+      }
+      if (
+        opponent?.currentPosition.row === rowIndex &&
+        opponent?.currentPosition.col === colIndex
+      ) {
+        value = OPPONENT_NODE;
+      }
+      grid[rowIndex].push(
+        createNode(rowIndex, colIndex, value, isStart, isDestination)
+      );
+    }
+  }
+  return {
+    grid,
+    bombsAreaRemainingTime,
+  };
+};
+
+export const createGridIfPlaceBombHere = (
   rawGrid: IRawGrid,
   startNode: IPosition | undefined,
   spoils: ISpoil[],

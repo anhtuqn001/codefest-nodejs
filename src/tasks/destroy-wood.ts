@@ -195,7 +195,6 @@ export default class DestroyWoodTask extends BaseTask {
     //   }
     // }
     if (destinationNode && destinationNode.score !== 0) {
-      console.log('destroy-wood destinationNode', destinationNode.row + '|' + destinationNode.col);
       this.pause();
       this.lastDestinationNode = destinationNode;
       mainTaskStackSubject.next({
@@ -254,12 +253,10 @@ export default class DestroyWoodTask extends BaseTask {
     // }
     if (!this.bestLand) {
       const landSeaRawGrid = getLandSeaRawGrid(map);
-      const { bestLand, closestNode } = getBestLand(mapInfo, landSeaRawGrid);
+      const { bestLand } = getBestLand(mapInfo, landSeaRawGrid);
       this.bestLand = bestLand;
-      this.closestNode = closestNode;
     }
-    if (this.bestLand && this.closestNode) {
-      // if ()
+    if (this.bestLand) {
       this.destroyLand(mapInfo);
     }
     // const isPlayerInBestLand =

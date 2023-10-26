@@ -3,6 +3,7 @@ import {
   CAN_GO_NODES,
   EGG_NODE,
   EGG_SPEED_MAPPING,
+  MYS_EGG_NODE,
   NEAR_BY_PLAYER_AREA_LAYER,
   NODE_SPOIL_TYPE_MAPPING,
   PLAYER_ID,
@@ -418,6 +419,11 @@ export const findNearestPositionOfBestLand = (mapInfo: IMapInfo, coordinateCombo
   })
   const inOrderVisitedArray = dijktra(grid, [...CAN_GO_NODES, WOOD_NODE], undefined, bestLandPositions);
   const destinationNode = getDestinationNode(inOrderVisitedArray);
+  if (!destinationNode) {
+    const inOrderVisitedArrayWithMys = dijktra(grid, [...CAN_GO_NODES, WOOD_NODE, MYS_EGG_NODE], undefined, bestLandPositions);
+    const destinationNodeWithMys = getDestinationNode(inOrderVisitedArrayWithMys);
+    return destinationNodeWithMys;
+  }
   return destinationNode;
 }
 
