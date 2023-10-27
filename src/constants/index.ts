@@ -15,7 +15,7 @@ export const DANGEROUS_BOMB_AFFECTED_NODE = 13;
 export const BOMB_NODE = 14;
 
 
-export const GAME_ID = "4f909f97-d7be-4643-83ed-6c41f38df26f";   
+export const GAME_ID = "6f4b6164-9809-4c53-a05b-2847c3a42b59";   
 export const PLAYER_ID = "player1-xxx";
 
 export const CANNOT_GO_NODE = [STONE_NODE, WOOD_NODE, BOMB_AFFECTED_NODE, MYS_EGG_NODE, EGG_NODE, OPPONENT_NODE, HOLE_NODE, BOMB_NODE];

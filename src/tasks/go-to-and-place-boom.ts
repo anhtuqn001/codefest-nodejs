@@ -6,6 +6,7 @@ import {
 } from "../algorithms";
 import {
   breadthFirstSearch,
+  createGoToPlaceBomGrid,
   createGrid,
   createGridToAvoidBomb,
   getShortestPath,
@@ -102,13 +103,8 @@ export default class GoToAndPlaceBombTask extends BaseTask {
     const player = getPlayer(players);
     if (!player) return;
     if (this.escapingDestination) {
-      // if (player?.currentPosition.col !== this.escapingDestination?.col || player?.currentPosition.row !== this.escapingDestination.row) {
         this.escapeFromBomb(player, mapInfo);
         return;
-      // } else {
-        // this.stop(this.id);
-        // return;
-      // }
     }
     if (!this.destinationPosition) return;
     if (

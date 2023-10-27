@@ -178,10 +178,12 @@ export default class PlaceBombTask extends BaseTask {
     if (
       this.bombPlaced && bombs.find(b => b.col === this.bombPlaced?.col && b.row === this.bombPlaced.row)
     ) {
-      if (isPlayerIsInDangerousArea(players, bombs, nodeGrid)) {
-        this.escapeFromBomb(player, mapInfo)
-        return;
-      }
+      // if (isPlayerIsInDangerousArea(players, bombs, nodeGrid)) {
+      //   this.escapeFromBomb(player, mapInfo)
+      //   return;
+      // }
+      this.stop(this.id);
+      return;
       // const bombsWithPower = getMappedBombWithPower(bombs, players);
       // const myBomb = bombsWithPower.find(b => b.col === this.bombPlaced?.col && b.row === this.bombPlaced?.row);
       // if (!myBomb) {

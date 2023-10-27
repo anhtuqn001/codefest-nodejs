@@ -290,6 +290,95 @@ export const createGrid = (
         ) {
           value = BOMB_NODE;
         }
+        if (isStart && value === BOMB_NODE) {
+          value = BOMB_AFFECTED_NODE;
+        }
+      }
+      if (
+        opponent?.currentPosition.row === rowIndex &&
+        opponent?.currentPosition.col === colIndex
+      ) {
+        value = OPPONENT_NODE;
+      }
+      grid[rowIndex].push(
+        createNode(rowIndex, colIndex, value, isStart, isDestination)
+      );
+    }
+  }
+  return {
+    grid,
+    bombsAreaRemainingTime,
+  };
+};
+
+export const createGoToPlaceBomGrid = (
+  rawGrid: IRawGrid,
+  startNode: IPosition | undefined,
+  spoils: ISpoil[],
+  bombs: IBomb[],
+  players: IPlayer[],
+  endNode?: IPosition | undefined
+) => {
+  if (!startNode)
+    return {
+      grid: [],
+      bombsAreaRemainingTime: {},
+    };
+  const grid: IGrid = [];
+  const numberOfRow = rawGrid.length;
+  const numberOfCol = rawGrid[0].length;
+  const opponent = getOpponent(players);
+  const bombsWithPower = getMappedBombWithPower(bombs, players);
+  const { bombsAreaMap, bombsAreaRemainingTime } = getBombAffectedAreaMapV2(
+    bombsWithPower,
+    numberOfRow,
+    numberOfCol
+  );
+  const keyValueSpoils: { [key: string]: number } = {};
+  spoils?.forEach((spoil) => {
+    keyValueSpoils[getCoordinateComboKey(spoil.row, spoil.col)] =
+      spoil.spoil_type;
+  });
+  for (let rowIndex = 0; rowIndex < numberOfRow; rowIndex++) {
+    grid[rowIndex] = [];
+    for (let colIndex = 0; colIndex < numberOfCol; colIndex++) {
+      const isStart =
+        startNode && rowIndex == startNode.row && colIndex == startNode.col
+          ? true
+          : false;
+      const isDestination =
+        endNode && rowIndex == endNode.row && colIndex == endNode.col
+          ? true
+          : false;
+      const isBombAffectedNode =
+        bombs?.length > 0
+          ? bombsAreaMap[rowIndex.toString()] &&
+            bombsAreaMap[rowIndex.toString()].includes(colIndex)
+          : false;
+      let value = rawGrid[rowIndex][colIndex];
+      // let value = keyValueSpoils[getCoordinateComboKey(rowIndex, colIndex)]
+      //   ? NODE_SPOIL_TYPE_MAPPING[
+      //       keyValueSpoils[getCoordinateComboKey(rowIndex, colIndex)].toString()
+      //     ]
+      //   : rawGrid[rowIndex][colIndex];
+      if (keyValueSpoils[getCoordinateComboKey(rowIndex, colIndex)]) {
+        value =
+          NODE_SPOIL_TYPE_MAPPING[
+            keyValueSpoils[getCoordinateComboKey(rowIndex, colIndex)].toString()
+          ];
+      }
+      if (CAN_GO_NODES.includes(value)) {
+        if (isBombAffectedNode) {
+          value = BOMB_AFFECTED_NODE;
+        }
+        if (
+          isPositionHaveBomb({ row: rowIndex, col: colIndex }, bombsWithPower)
+        ) {
+          value = BOMB_NODE;
+        }
+        if (rowIndex === startNode.row && colIndex === startNode.col && value === BOMB_NODE) {
+          value = BOMB_AFFECTED_NODE;
+        }
       }
       if (
         opponent?.currentPosition.row === rowIndex &&
@@ -372,6 +461,9 @@ export const createGridIfPlaceBombHere = (
           isPositionHaveBomb({ row: rowIndex, col: colIndex }, bombsWithPower)
         ) {
           value = BOMB_NODE;
+        }
+        if (rowIndex === startNode.row && colIndex === startNode.col && value === BOMB_NODE) {
+          value = BOMB_AFFECTED_NODE;
         }
       }
       if (
@@ -709,6 +801,7 @@ export const createDestroyWoodGrid = (
     numberOfRow,
     numberOfCol
   );
+  rawGrid = getDamagedRawGridByBombs(bombsWithPower, rawGrid);
   for (let rowIndex = 0; rowIndex < numberOfRow; rowIndex++) {
     grid[rowIndex] = [];
     for (let colIndex = 0; colIndex < numberOfCol; colIndex++) {
@@ -744,6 +837,9 @@ export const createDestroyWoodGrid = (
           isPositionHaveBomb({ row: rowIndex, col: colIndex }, bombsWithPower)
         ) {
           value = BOMB_NODE;
+        }
+        if (isStart && value === BOMB_NODE) {
+          value = BOMB_AFFECTED_NODE;
         }
       }
       if (value === WOOD_NODE) {
@@ -1253,3 +1349,46 @@ const calculateNodeScore = (
   }
   node.score = score;
 };
+
+const getDamagedRawGridByBombs = (bombsWithPower: IBombWithPower[], rawGrid: IRawGrid) => {
+  // const damagedAreaByComboRowColKey: string[] = [];
+  const newRawGrid = rawGrid.map(r => [...r]);
+  // const bombsAreaRemainingTime: { [key: string]: number } = {};
+  for (let i = 0; i < bombsWithPower.length; i++) {  
+  let isAboveDone: boolean = false;
+  let isBelowDone: boolean = false
+  let isLeftDone: boolean = false
+  let isRightDone: boolean = false
+    for (let j = 1; j < bombsWithPower[i].power + 1; j++) {
+      if (isAboveDone && isBelowDone && isLeftDone && isRightDone) {
+        break;
+      }
+      if (bombsWithPower[i].row - j >= 0 && !isAboveDone) {
+        if (rawGrid[bombsWithPower[i].row - j][bombsWithPower[i].col] === WOOD_NODE) {
+          newRawGrid[bombsWithPower[i].row - j][bombsWithPower[i].col] = NORMAL_NODE;
+          isAboveDone = true;
+        }
+      }
+      if (bombsWithPower[i].row + j < rawGrid.length && !isBelowDone) {
+        if (rawGrid[bombsWithPower[i].row + j][bombsWithPower[i].col] === WOOD_NODE) {
+          newRawGrid[bombsWithPower[i].row + j][bombsWithPower[i].col] = NORMAL_NODE;
+          isBelowDone = true;
+        }
+      }
+
+      if (bombsWithPower[i].col + j < rawGrid[0].length && !isRightDone) {
+        if (rawGrid[bombsWithPower[i].row][bombsWithPower[i].col + j] === WOOD_NODE) {
+          newRawGrid[bombsWithPower[i].row][bombsWithPower[i].col + j] = NORMAL_NODE;
+          isRightDone = true;
+        }
+      }
+      if (bombsWithPower[i].col - j >= 0 && !isLeftDone) {
+        if (rawGrid[bombsWithPower[i].row][bombsWithPower[i].col - j] === WOOD_NODE) {
+          newRawGrid[bombsWithPower[i].row][bombsWithPower[i].col - j] = NORMAL_NODE;
+          isLeftDone = true;
+        }
+      }
+    }
+  }
+  return newRawGrid;
+}

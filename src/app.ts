@@ -243,7 +243,7 @@ socket.on("ticktack player", (res) => {
   const tag: ITag = res?.tag;
   const dragonEggGSTArray: IDragonEggGST[] = res?.map_info?.dragonEggGSTArray;
   const player_id: string = res?.player_id;
-  console.log('tag', tag);
+  // console.log('tag', tag);
   // console.log('res', res);
   if (res?.map_info) {
     globalSubject.next({
@@ -275,13 +275,13 @@ socket.on("ticktack player", (res) => {
   //   isPreventing = false;
   // }
   // console.log('player', player?.speed);
+  console.log('player', player?.currentPosition.row + "|" + player?.currentPosition.col);
   if (player?.lives) {
     if (player?.lives - preLives < 0) {
       console.log('woundedddddddddddddddddddddddddddddddddddddddddddddddddddddddddd');
     }
     preLives = player?.lives;
   }
-  
   console.log('mainTaskStack', mainTaskStack.getAllTasks().map(t => t.name));
   mainTaskStackSubject.next({
     action: IMainStackAction.DO,
@@ -295,7 +295,7 @@ socket.on("ticktack player", (res) => {
 socket.on("drive player", (res) => {
   // console.log("[Socket] drive-player responsed, res: ", res);
   const tasks = mainTaskStack.getAllTasks();
-  console.log('drive player res', res);
+  // console.log('drive player res', res);
 
   // if (res.direction.includes('b') && res.player_id === PLAYER_ID && !tasks.some(t => t.name === 'collect-item')) {
   //   of("1")

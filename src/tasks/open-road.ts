@@ -44,6 +44,7 @@ export default class OpenRoad extends BaseTask {
   }
 
   openRoadObserver = (mapInfo: IMapInfo) => {
+    if (this.taskState === ITaskState.PAUSED || this.taskState === ITaskState.STOPPED) return;
     if (!this.target) {
         this.stop(this.id);
         return;
@@ -84,7 +85,8 @@ export default class OpenRoad extends BaseTask {
             this.stop(this.id);
             return;
         } else {
-            this.pause();
+            // this.pause();
+            // console.log('open-road tempDestinationNode', tempDestinationNode.row + "|" + tempDestinationNode.col)
             mainTaskStackSubject.next({
                 action: IMainStackAction.ADD,
                 params: {
@@ -92,6 +94,8 @@ export default class OpenRoad extends BaseTask {
                   singleTarget: tempDestinationNode,
                 },
               });
+            this.stop(this.id);
+            return;
         }
     }
   }

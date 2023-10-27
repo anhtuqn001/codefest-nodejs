@@ -4,6 +4,8 @@ import {
   getDestinationNode,
   getLandSeaRawGrid,
   getPlayer,
+  getStringPathFromShortestPath,
+  isPlayerIsInDangerousArea,
 } from "../algorithms";
 import {
   breadthFirstSearch,
@@ -11,10 +13,11 @@ import {
   breadthFirstSearchWithScore,
   createDestroyWoodGrid,
   createGrid,
+  createGridToAvoidBomb,
   getShortestPath,
 } from "../algorithms/bredth-first-search";
 import dijktra from "../algorithms/dijktra";
-import { mainTaskStackSubject } from "../app";
+import { mainTaskStackSubject, socket } from "../app";
 import {
   BOMB_AFFECTED_NODE,
   CANNOT_GO_NODE,
@@ -49,6 +52,7 @@ export default class DestroyWoodTask extends BaseTask {
   firstRendered: boolean = false;
   passedNodes: IBestLandType = {};
   lastDestinationNode: INode | undefined = undefined;
+  escapingDestination: IPosition | undefined = undefined;
   // destinationNodeWithoutBomb: INode | undefined = undefined;
   constructor(globalSubject: IGloBalSubject) {
     super(globalSubject);
@@ -93,6 +97,45 @@ export default class DestroyWoodTask extends BaseTask {
   //   const shortestPath = getShortestPath(destinationNode);
   //   return shortestPath[shortestPath.length - 1];
   // };
+
+  escapeFromBomb = (player: IPlayer, mapInfo: IMapInfo) => {
+    const { map, spoils, bombs, players } = mapInfo;
+    const { grid: nodeGrid, bombsAreaRemainingTime} = createGridToAvoidBomb(
+      map,
+      player.currentPosition,
+      spoils,
+      bombs,
+      players
+    );
+    // nodeGrid[player.currentPosition.row][player.currentPosition.row].value =
+    //   NORMAL_NODE;
+    const inOrderVisitedArray = breadthFirstSearch(
+      nodeGrid,
+      player,
+      bombsAreaRemainingTime,
+      [...CAN_GO_NODES, BOMB_AFFECTED_NODE],
+      undefined,
+      CAN_GO_NODES
+    );
+    const destinationNode = getDestinationNode(inOrderVisitedArray);
+    if (destinationNode) {
+      if (player.currentPosition.row !== destinationNode.row || player.currentPosition.col !== destinationNode.col) { 
+        const shortestPath = getShortestPath(destinationNode);
+        const stringToShortestPath = getStringPathFromShortestPath(
+          player.currentPosition,
+          shortestPath
+        );
+        if (!this.escapingDestination) {
+          this.escapingDestination = { row: destinationNode.row, col: destinationNode.col};
+        }
+        if (stringToShortestPath) {
+          socket.emit("drive player", { direction: stringToShortestPath });
+        }
+      } else {
+        this.stop(this.id);
+      }
+    }
+  };
 
   destroyLand = (mapInfo: IMapInfo) => {
     const { map, players, spoils, bombs, tag, player_id } = mapInfo;
@@ -220,6 +263,11 @@ export default class DestroyWoodTask extends BaseTask {
         })
       ) {
         this.stop(this.id);
+      } else {
+        if (isPlayerIsInDangerousArea(players, bombs, grid)) {
+          this.escapeFromBomb(player, mapInfo);
+          return;
+        }
       }
     }
   };
@@ -244,6 +292,10 @@ export default class DestroyWoodTask extends BaseTask {
       // this.stop(this.id);
       return;
     }
+    if (this.escapingDestination) {
+      this.escapeFromBomb(player, mapInfo);
+      return;
+  }
     // const landSeaRawGrid = getLandSeaRawGrid(map);
     // const bestLand = getBestLand(landSeaRawGrid);
     // if (!bestLand) {
