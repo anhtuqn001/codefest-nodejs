@@ -20,9 +20,11 @@ import dijktra from "../algorithms/dijktra";
 import { mainTaskStackSubject, socket } from "../app";
 import {
   BOMB_AFFECTED_NODE,
+  BOMB_NODE,
   CANNOT_GO_NODE,
   CAN_GO_NODES,
   DELAY_EGG_NODE,
+  MYS_EGG_NODE,
   NORMAL_NODE,
   PLAYER_ID,
   POWER_EGG_NODE,
@@ -196,31 +198,12 @@ export default class DestroyWoodTask extends BaseTask {
         return 0;
       }
     );
-
-    // const sortedInOrderVisitedArrayWithoutBomb = inOrderVisitedArrayWithoutBomb.filter((node) => {
-    //   if (node?.score === undefined || node?.score === null) return true;
-    //   if (node?.score > 0) {
-    //     return true;
-    //   } else {
-    //     return false;
-    //   }
-    // }).sort(
-    //   (a: INode, b: INode) => {
-    //     if (b?.score !== undefined && a?.score !== undefined) {
-    //       return (
-    //         b?.score -
-    //         b.distance / STEP_BOMB_RATIO -
-    //         (a?.score - a.distance / STEP_BOMB_RATIO)
-    //       );
-    //     }
-    //     return 0;
-    //   }
-    // );
     const destinationNode = sortedInOrderVisitedArray[0];
+    console.log('destroy-wood destinationNode', destinationNode);
     if (!destinationNode) {
       // open road
-      const { grid: tempGrid } = createGrid(map, player.currentPosition, spoils, bombs, players);
-      const inOderVisitedArray = dijktra(tempGrid, [...CAN_GO_NODES, WOOD_NODE, BOMB_AFFECTED_NODE], undefined, grid.flat().filter(node => node.value === WOOD_NODE));
+      const { grid: tempGrid, bombsAreaRemainingTime } = createGrid(map, player.currentPosition, spoils, bombs, players);
+      const inOderVisitedArray = dijktra(tempGrid, player, {}, [...CAN_GO_NODES, WOOD_NODE, BOMB_AFFECTED_NODE, BOMB_NODE, MYS_EGG_NODE], undefined, grid.flat().filter(node => node.value === WOOD_NODE));
       const destination = getDestinationNode(inOderVisitedArray);
       this.pause();
       mainTaskStackSubject.next({

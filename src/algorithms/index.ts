@@ -16,6 +16,7 @@ import {
   IBomb,
   IBombWithPower,
   IDragonEggGST,
+  IGrid,
   IMapInfo,
   INode,
   IPlayer,
@@ -29,6 +30,7 @@ import {
   createLandSeaGrid,
   createNode,
   getBombAffectedAreaMapV2,
+  getBombAffectedAreaMapV3,
   getBombAffectedPositions,
   getShortestPath,
 } from "./bredth-first-search";
@@ -409,7 +411,7 @@ export const findNearestPositionOfBestLand = (mapInfo: IMapInfo, coordinateCombo
   const { map, bombs, players, spoils } = mapInfo;
   const player = getPlayer(players);
   if (!player) return undefined;
-  const { grid } = createGrid(map, player?.currentPosition, spoils, bombs, players);
+  const { grid, bombsAreaRemainingTime } = createGrid(map, player?.currentPosition, spoils, bombs, players);
   const bestLandPositions = coordinateCombosInArea.map(item => {
     const arrayConverted = item.split("|")
     return {
@@ -417,10 +419,10 @@ export const findNearestPositionOfBestLand = (mapInfo: IMapInfo, coordinateCombo
       col: parseInt(arrayConverted[1]),
     }
   })
-  const inOrderVisitedArray = dijktra(grid, [...CAN_GO_NODES, WOOD_NODE], undefined, bestLandPositions);
+  const inOrderVisitedArray = dijktra(grid, player, bombsAreaRemainingTime, [...CAN_GO_NODES, WOOD_NODE], undefined, bestLandPositions);
   const destinationNode = getDestinationNode(inOrderVisitedArray);
   if (!destinationNode) {
-    const inOrderVisitedArrayWithMys = dijktra(grid, [...CAN_GO_NODES, WOOD_NODE, MYS_EGG_NODE], undefined, bestLandPositions);
+    const inOrderVisitedArrayWithMys = dijktra(grid, player, bombsAreaRemainingTime, [...CAN_GO_NODES, WOOD_NODE, MYS_EGG_NODE], undefined, bestLandPositions);
     const destinationNodeWithMys = getDestinationNode(inOrderVisitedArrayWithMys);
     return destinationNodeWithMys;
   }
@@ -461,3 +463,17 @@ export const getSpeed = (player: IPlayer) => {
 export const getTimeForPlayerToNode = (player: IPlayer, node: INode) => {
   return node.distance * getSpeed(player);
 }
+
+// export const checkIfBombPlayerHereCanReachTarget = (player: IPlayer, bombPosition: IPosition, target: IPosition) => {
+//   powe
+//   for(let i = 0; i < )
+// }
+export const isWoodBeingAffectedByBombs = (mapInfo: IMapInfo, woodPosition: IPosition) => {
+  const { bombs, players, map } = mapInfo;
+  const bombsWithPower = getMappedBombWithPower(bombs, players);
+  const { bombsAreaMap } = getBombAffectedAreaMapV3(map, bombsWithPower, map.length, map[0].length);
+  if (bombsAreaMap[woodPosition.row] && bombsAreaMap[woodPosition.row].includes(woodPosition.col)) {
+    return true;
+  }
+  return false
+} 

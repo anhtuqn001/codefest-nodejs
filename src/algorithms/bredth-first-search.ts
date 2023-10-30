@@ -9,6 +9,7 @@ import {
   isPositionHaveBomb,
 } from ".";
 import {
+  BOMBS_CANT_THROUGH_NODES,
   BOMB_AFFECTED_NODE,
   BOMB_NODE,
   CANNOT_GO_NODE,
@@ -16,6 +17,8 @@ import {
   DANGEROUS_BOMB_AFFECTED_NODE,
   DELAY_EGG_NODE,
   EGG_NODE,
+  GOOD_EGG_NODES,
+  MYS_EGG_NODE,
   NEAR_BY_PLAYER_AREA_LAYER,
   NODE_SPOIL_TYPE_MAPPING,
   NORMAL_NODE,
@@ -237,17 +240,22 @@ export const createGrid = (
     return {
       grid: [],
       bombsAreaRemainingTime: {},
+      bombsAreaMap: {},
     };
   const grid: IGrid = [];
   const numberOfRow = rawGrid.length;
   const numberOfCol = rawGrid[0].length;
   const opponent = getOpponent(players);
   const bombsWithPower = getMappedBombWithPower(bombs, players);
-  const { bombsAreaMap, bombsAreaRemainingTime } = getBombAffectedAreaMapV2(
+  console.log("bombWithPower", bombsWithPower);
+  const { bombsAreaMap, bombsAreaRemainingTime } = getBombAffectedAreaMapV3(
+    rawGrid,
     bombsWithPower,
     numberOfRow,
     numberOfCol
   );
+  console.log("bombsAreaMap", bombsAreaMap);
+  console.log("bombsAreaRemainingTime", bombsAreaRemainingTime);
   const keyValueSpoils: { [key: string]: number } = {};
   spoils?.forEach((spoil) => {
     keyValueSpoils[getCoordinateComboKey(spoil.row, spoil.col)] =
@@ -308,6 +316,7 @@ export const createGrid = (
   return {
     grid,
     bombsAreaRemainingTime,
+    bombsAreaMap,
   };
 };
 
@@ -376,7 +385,11 @@ export const createGoToPlaceBomGrid = (
         ) {
           value = BOMB_NODE;
         }
-        if (rowIndex === startNode.row && colIndex === startNode.col && value === BOMB_NODE) {
+        if (
+          rowIndex === startNode.row &&
+          colIndex === startNode.col &&
+          value === BOMB_NODE
+        ) {
           value = BOMB_AFFECTED_NODE;
         }
       }
@@ -462,7 +475,11 @@ export const createGridIfPlaceBombHere = (
         ) {
           value = BOMB_NODE;
         }
-        if (rowIndex === startNode.row && colIndex === startNode.col && value === BOMB_NODE) {
+        if (
+          rowIndex === startNode.row &&
+          colIndex === startNode.col &&
+          value === BOMB_NODE
+        ) {
           value = BOMB_AFFECTED_NODE;
         }
       }
@@ -491,10 +508,11 @@ export const createGridToAvoidBomb = (
   players: IPlayer[],
   endNode?: IPosition | undefined
 ) => {
-  if (!startNode) return {
-    grid: [],
-    bombsAreaRemainingTime: {}
-  };
+  if (!startNode)
+    return {
+      grid: [],
+      bombsAreaRemainingTime: {},
+    };
   const grid: IGrid = [];
   const numberOfRow = rawGrid.length;
   const numberOfCol = rawGrid[0].length;
@@ -522,10 +540,10 @@ export const createGridToAvoidBomb = (
           ? true
           : false;
       const isBombAffectedNode =
-          bombs?.length > 0
-            ? bombsAreaMap[rowIndex.toString()] &&
-              bombsAreaMap[rowIndex.toString()].includes(colIndex)
-            : false;
+        bombs?.length > 0
+          ? bombsAreaMap[rowIndex.toString()] &&
+            bombsAreaMap[rowIndex.toString()].includes(colIndex)
+          : false;
       let value = rawGrid[rowIndex][colIndex];
       if (keyValueSpoils[getCoordinateComboKey(rowIndex, colIndex)]) {
         value =
@@ -542,9 +560,13 @@ export const createGridToAvoidBomb = (
         ) {
           value = BOMB_NODE;
         }
-        if (rowIndex === startNode.row && colIndex === startNode.col && value === BOMB_NODE) {
+        if (
+          rowIndex === startNode.row &&
+          colIndex === startNode.col &&
+          value === BOMB_NODE
+        ) {
           value = BOMB_AFFECTED_NODE;
-        } 
+        }
       }
       if (
         opponent?.currentPosition.row === rowIndex &&
@@ -564,7 +586,7 @@ export const createGridToAvoidBomb = (
   }
   return {
     grid,
-    bombsAreaRemainingTime
+    bombsAreaRemainingTime,
   };
 };
 
@@ -843,7 +865,9 @@ export const createDestroyWoodGrid = (
         }
       }
       if (value === WOOD_NODE) {
-        const isNearByPlayer = Math.abs(startPosition.col - colIndex) < NEAR_BY_PLAYER_AREA_LAYER && Math.abs(startPosition.row - rowIndex) < NEAR_BY_PLAYER_AREA_LAYER;
+        const isNearByPlayer =
+          Math.abs(startPosition.col - colIndex) < NEAR_BY_PLAYER_AREA_LAYER &&
+          Math.abs(startPosition.row - rowIndex) < NEAR_BY_PLAYER_AREA_LAYER;
         if (
           bestLand[getCoordinateComboKey(rowIndex, colIndex)] ||
           bestLand[getCoordinateComboKey(rowIndex + 1, colIndex)] ||
@@ -1071,6 +1095,155 @@ export const getBombAffectedAreaMapV2 = (
   return { bombsAreaMap, bombsAreaRemainingTime };
 };
 
+export const getBombAffectedAreaMapV3 = (
+  rawGrid: IRawGrid,
+  bombsWithPower: IBombWithPower[],
+  maxRowNumber: number,
+  maxColNumber: number
+) => {
+  const bombsAreaMap: { [key: string]: number[] } = {};
+  const bombsAreaRemainingTime: { [key: string]: number } = {};
+  for (let i = 0; i < bombsWithPower.length; i++) {
+    let isAboveDone = false;
+    let isBelowDone = false;
+    let isLeftDone = false;
+    let isRightDone = false;
+    bombsAreaMap[bombsWithPower[i].row] = [
+      ...(bombsAreaMap[bombsWithPower[i].row] ?? []),
+      bombsWithPower[i].col,
+    ];
+    const rowColComboKey = getCoordinateComboKey(
+      bombsWithPower[i].row,
+      bombsWithPower[i].col
+    );
+    if (bombsAreaRemainingTime[rowColComboKey] === undefined) {
+      bombsAreaRemainingTime[rowColComboKey] = bombsWithPower[i].remainTime;
+    } else {
+      if (
+        bombsAreaRemainingTime[rowColComboKey] >= bombsWithPower[i].remainTime
+      ) {
+        bombsAreaRemainingTime[rowColComboKey] = bombsWithPower[i].remainTime;
+      }
+    }
+    for (let j = 1; j < bombsWithPower[i].power + 1; j++) {
+      if (bombsWithPower[i].row - j >= 0 && !isAboveDone) {
+        bombsAreaMap[bombsWithPower[i].row - j] = [
+          ...(bombsAreaMap[bombsWithPower[i].row - j] ?? []),
+          bombsWithPower[i].col,
+        ];
+        const rowColComboKey = getCoordinateComboKey(
+          bombsWithPower[i].row - j,
+          bombsWithPower[i].col
+        );
+        if (bombsAreaRemainingTime[rowColComboKey] === undefined) {
+          bombsAreaRemainingTime[rowColComboKey] = bombsWithPower[i].remainTime;
+        } else {
+          if (
+            bombsAreaRemainingTime[rowColComboKey] >=
+            bombsWithPower[i].remainTime
+          ) {
+            bombsAreaRemainingTime[rowColComboKey] =
+              bombsWithPower[i].remainTime;
+          }
+        }
+        if (
+          BOMBS_CANT_THROUGH_NODES.includes(
+            rawGrid[bombsWithPower[i].row - j][bombsWithPower[i].col]
+          )
+        ) {
+          isAboveDone = true;
+        }
+      }
+      if (bombsWithPower[i].row + j < maxRowNumber && !isBelowDone) {
+        bombsAreaMap[bombsWithPower[i].row + j] = [
+          ...(bombsAreaMap[bombsWithPower[i].row + j] ?? []),
+          bombsWithPower[i].col,
+        ];
+        const rowColComboKey = getCoordinateComboKey(
+          bombsWithPower[i].row + j,
+          bombsWithPower[i].col
+        );
+        if (bombsAreaRemainingTime[rowColComboKey] === undefined) {
+          bombsAreaRemainingTime[rowColComboKey] = bombsWithPower[i].remainTime;
+        } else {
+          if (
+            bombsAreaRemainingTime[rowColComboKey] >=
+            bombsWithPower[i].remainTime
+          ) {
+            bombsAreaRemainingTime[rowColComboKey] =
+              bombsWithPower[i].remainTime;
+          }
+        }
+        if (
+          BOMBS_CANT_THROUGH_NODES.includes(
+            rawGrid[bombsWithPower[i].row + j][bombsWithPower[i].col]
+          )
+        ) {
+          isBelowDone = true;
+        }
+      }
+
+      if (bombsWithPower[i].col + j < maxColNumber && !isRightDone) {
+        bombsAreaMap[bombsWithPower[i].row] = [
+          ...(bombsAreaMap[bombsWithPower[i].row] ?? []),
+          bombsWithPower[i].col + j,
+        ];
+        const rowColComboKey = getCoordinateComboKey(
+          bombsWithPower[i].row,
+          bombsWithPower[i].col + j
+        );
+        if (bombsAreaRemainingTime[rowColComboKey] === undefined) {
+          bombsAreaRemainingTime[rowColComboKey] = bombsWithPower[i].remainTime;
+        } else {
+          if (
+            bombsAreaRemainingTime[rowColComboKey] >=
+            bombsWithPower[i].remainTime
+          ) {
+            bombsAreaRemainingTime[rowColComboKey] =
+              bombsWithPower[i].remainTime;
+          }
+        }
+        if (
+          BOMBS_CANT_THROUGH_NODES.includes(
+            rawGrid[bombsWithPower[i].row][bombsWithPower[i].col + j]
+          )
+        ) {
+          isRightDone = true;
+        }
+      }
+      if (bombsWithPower[i].col - j >= 0 && !isLeftDone) {
+        bombsAreaMap[bombsWithPower[i].row] = [
+          ...(bombsAreaMap[bombsWithPower[i].row] ?? []),
+          bombsWithPower[i].col - j,
+        ];
+        const rowColComboKey = getCoordinateComboKey(
+          bombsWithPower[i].row,
+          bombsWithPower[i].col - j
+        );
+        if (bombsAreaRemainingTime[rowColComboKey] === undefined) {
+          bombsAreaRemainingTime[rowColComboKey] = bombsWithPower[i].remainTime;
+        } else {
+          if (
+            bombsAreaRemainingTime[rowColComboKey] >=
+            bombsWithPower[i].remainTime
+          ) {
+            bombsAreaRemainingTime[rowColComboKey] =
+              bombsWithPower[i].remainTime;
+          }
+        }
+        if (
+          BOMBS_CANT_THROUGH_NODES.includes(
+            rawGrid[bombsWithPower[i].row][bombsWithPower[i].col - j]
+          )
+        ) {
+          isLeftDone = true;
+        }
+      }
+    }
+  }
+  return { bombsAreaMap, bombsAreaRemainingTime };
+};
+
 export const isValueNodes = (
   objects: TNodeValue[] | IPosition[]
 ): objects is TNodeValue[] => {
@@ -1148,13 +1321,15 @@ export const breadthFirstSearchWithScore = (
 
 export const breadthFirstSearchToKillTarget = (
   grid: IGrid,
-  playerPower: number,
+  player: IPlayer,
+  bombsAreaRemainingTime: { [key: string]: number } = {},
   target: IPosition,
   allowedNodes?: TNodeValue[],
   notAllowedNodes?: TNodeValue[]
 ): INode[] => {
   let queue: INode[] = [];
   let inOrderVisitedArray: INode[] = [];
+  const playerPower = player.power;
   const startNode = getStartNodeFromGrid(grid);
   if (!startNode || !playerPower) return [];
   startNode.distance = 0;
@@ -1169,6 +1344,19 @@ export const breadthFirstSearchToKillTarget = (
       notAllowedNodes
     );
     updateNeightborNodes(queue[0], neighbors);
+    neighbors = neighbors.filter((node) => {
+      if (
+        node.value === BOMB_AFFECTED_NODE &&
+        bombsAreaRemainingTime[getCoordinateComboKey(node.row, node.col)] !==
+          undefined &&
+        getTimeForPlayerToNode(player, node) >
+          bombsAreaRemainingTime[getCoordinateComboKey(node.row, node.col)] -
+            TIME_FOR_PLACE_BOMB_AND_RUN
+      ) {
+        return false;
+      }
+      return true;
+    });
     queue = [...queue, ...neighbors];
     let nodeToTraverse = queue.shift();
     calculateTargetAreaScore(grid, nodeToTraverse, playerPower, target);
@@ -1178,68 +1366,105 @@ export const breadthFirstSearchToKillTarget = (
 
     if (!nodeToTraverse) continue;
     if (nodeToTraverse?.isDestination) return inOrderVisitedArray;
-    // if (nodesToStop && nodesToStop.length > 0) {
-    //   if (isValueNodes(nodesToStop)) {
-    //     if (nodesToStop.includes(nodeToTraverse?.value)) {
-    //       nodeToTraverse.isDestination = true;
-    //       return inOrderVisitedArray;
-    //     }
-    //   } else if (
-    //     isPositionNodes(nodesToStop) &&
-    //     nodesToStop.some(
-    //       (p) => p.row === nodeToTraverse?.row && p.col === nodeToTraverse?.col
-    //     )
-    //   ) {
-    //     nodeToTraverse.isDestination = true;
-    //     return inOrderVisitedArray;
-    //   }
-    // } else {
-    //   if (nodeToTraverse?.isDestination) return inOrderVisitedArray;
-    // }
   }
   return inOrderVisitedArray;
 };
 
-const calculateTargetAreaScore = (
+export const calculateTargetAreaScore = (
   grid: IGrid,
   node: INode | undefined,
   playerPower: number,
   target: IPosition
 ) => {
   if (!node) return;
-  const { row, col } = node;
+  const { row, col, value } = node;
   const { row: targetRow, col: targetCol } = target;
   let score = 0;
+  if (
+    Math.abs(col - targetCol) > playerPower ||
+    Math.abs(row - targetRow) > playerPower
+  ) {
+    node.score = score;
+    return;
+  }
   for (let i = 1; i < playerPower + 1; i++) {
-    if (targetRow - i > 0 && targetRow - i === row && targetCol === col) {
-      score++;
-      break;
+    // if (targetRow - i > 0 && targetRow - i === row && targetCol === col) {
+    //   if (value === STONE_NODE) {
+    //     break;
+    //   }
+    //   score++;
+    //   break;
+    // }
+    if (row - i > 0) {
+      if (grid[row - i][col].value === STONE_NODE) {
+        break;
+      }
+      if (row - i === targetRow && col === targetCol) {
+        score += 5;
+        score -= i;
+      }
     }
   }
   for (let i = 1; i < playerPower + 1; i++) {
-    if (
-      targetRow + i < grid.length - i &&
-      targetRow + i === row &&
-      col === targetCol
-    ) {
-      score++;
-      break;
+    // if (
+    //   targetRow + i < grid.length - i &&
+    //   targetRow + i === row &&
+    //   col === targetCol
+    // ) {
+    //   if (value === STONE_NODE) {
+    //     break;
+    //   }
+    //   score++;
+    //   break;
+    // }
+    if (row + i < grid.length) {
+      if (grid[row + i][col].value === STONE_NODE) {
+        break;
+      }
+      if (row + i === targetRow && col === targetCol) {
+        score += 5;
+        score -= i;
+      }
     }
   }
   for (let i = 1; i < playerPower + 1; i++) {
-    if (targetCol - i > 0 && targetCol - i === col && row === targetRow) {
-      score++;
-      break;
+    // if (targetCol - i > 0 && targetCol - i === col && row === targetRow) {
+    //   if (value === STONE_NODE) {
+    //     break;
+    //   }
+    //   score++;
+    //   break;
+    // }
+    if (col - i > 0) {
+      if (grid[row][col - i].value === STONE_NODE) {
+        break;
+      }
+      if (row === targetRow && col - i === targetCol) {
+        score += 5;
+        score -= i;
+      }
     }
   }
   for (let i = 1; i < playerPower + 1; i++) {
-    if (
-      targetCol + i < grid[0].length &&
-      targetCol + i === col &&
-      row === targetRow
-    ) {
-      score++;
-      break;
+    // if (
+    //   targetCol + i < grid[0].length &&
+    //   targetCol + i === col &&
+    //   row === targetRow
+    // ) {
+    //   if (value === STONE_NODE) {
+    //     break;
+    //   }
+    //   score++;
+    //   break;
+    // }
+    if (col + i < grid[0].length) {
+      if (grid[row][col + i].value === STONE_NODE) {
+        break;
+      }
+      if (row === targetRow && col + i === targetCol) {
+        score += 5;
+        score -= i;
+      }
     }
   }
   node.score = score;
@@ -1253,24 +1478,14 @@ const calculateNodeScore = (
   if (!node) return;
   const { row, col } = node;
   let score = 0;
-  if (
-    [POWER_EGG_NODE, DELAY_EGG_NODE, SPEED_EGG_NODE].includes(node.value) &&
-    node.distance < 5
-  ) {
+  if (GOOD_EGG_NODES.includes(node.value) && node.distance < 5) {
     score++;
-    if (
-      row - 1 > 0 &&
-      [POWER_EGG_NODE, DELAY_EGG_NODE, SPEED_EGG_NODE].includes(
-        grid[row - 1][col].value
-      )
-    ) {
+    if (row - 1 > 0 && GOOD_EGG_NODES.includes(grid[row - 1][col].value)) {
       score += 0.5;
     }
     if (
       row + 1 < grid.length &&
-      [POWER_EGG_NODE, DELAY_EGG_NODE, SPEED_EGG_NODE].includes(
-        grid[row + 1][col].value
-      )
+      GOOD_EGG_NODES.includes(grid[row + 1][col].value)
     ) {
       score += 0.5;
     }
@@ -1350,45 +1565,255 @@ const calculateNodeScore = (
   node.score = score;
 };
 
-const getDamagedRawGridByBombs = (bombsWithPower: IBombWithPower[], rawGrid: IRawGrid) => {
+const getDamagedRawGridByBombs = (
+  bombsWithPower: IBombWithPower[],
+  rawGrid: IRawGrid
+) => {
   // const damagedAreaByComboRowColKey: string[] = [];
-  const newRawGrid = rawGrid.map(r => [...r]);
+  const newRawGrid = rawGrid.map((r) => [...r]);
   // const bombsAreaRemainingTime: { [key: string]: number } = {};
-  for (let i = 0; i < bombsWithPower.length; i++) {  
-  let isAboveDone: boolean = false;
-  let isBelowDone: boolean = false
-  let isLeftDone: boolean = false
-  let isRightDone: boolean = false
+  for (let i = 0; i < bombsWithPower.length; i++) {
+    let isAboveDone: boolean = false;
+    let isBelowDone: boolean = false;
+    let isLeftDone: boolean = false;
+    let isRightDone: boolean = false;
     for (let j = 1; j < bombsWithPower[i].power + 1; j++) {
       if (isAboveDone && isBelowDone && isLeftDone && isRightDone) {
         break;
       }
       if (bombsWithPower[i].row - j >= 0 && !isAboveDone) {
-        if (rawGrid[bombsWithPower[i].row - j][bombsWithPower[i].col] === WOOD_NODE) {
-          newRawGrid[bombsWithPower[i].row - j][bombsWithPower[i].col] = NORMAL_NODE;
+        if (
+          rawGrid[bombsWithPower[i].row - j][bombsWithPower[i].col] ===
+          WOOD_NODE
+        ) {
+          newRawGrid[bombsWithPower[i].row - j][bombsWithPower[i].col] =
+            NORMAL_NODE;
           isAboveDone = true;
         }
       }
       if (bombsWithPower[i].row + j < rawGrid.length && !isBelowDone) {
-        if (rawGrid[bombsWithPower[i].row + j][bombsWithPower[i].col] === WOOD_NODE) {
-          newRawGrid[bombsWithPower[i].row + j][bombsWithPower[i].col] = NORMAL_NODE;
+        if (
+          rawGrid[bombsWithPower[i].row + j][bombsWithPower[i].col] ===
+          WOOD_NODE
+        ) {
+          newRawGrid[bombsWithPower[i].row + j][bombsWithPower[i].col] =
+            NORMAL_NODE;
           isBelowDone = true;
         }
       }
 
       if (bombsWithPower[i].col + j < rawGrid[0].length && !isRightDone) {
-        if (rawGrid[bombsWithPower[i].row][bombsWithPower[i].col + j] === WOOD_NODE) {
-          newRawGrid[bombsWithPower[i].row][bombsWithPower[i].col + j] = NORMAL_NODE;
+        if (
+          rawGrid[bombsWithPower[i].row][bombsWithPower[i].col + j] ===
+          WOOD_NODE
+        ) {
+          newRawGrid[bombsWithPower[i].row][bombsWithPower[i].col + j] =
+            NORMAL_NODE;
           isRightDone = true;
         }
       }
       if (bombsWithPower[i].col - j >= 0 && !isLeftDone) {
-        if (rawGrid[bombsWithPower[i].row][bombsWithPower[i].col - j] === WOOD_NODE) {
-          newRawGrid[bombsWithPower[i].row][bombsWithPower[i].col - j] = NORMAL_NODE;
+        if (
+          rawGrid[bombsWithPower[i].row][bombsWithPower[i].col - j] ===
+          WOOD_NODE
+        ) {
+          newRawGrid[bombsWithPower[i].row][bombsWithPower[i].col - j] =
+            NORMAL_NODE;
           isLeftDone = true;
         }
       }
     }
   }
   return newRawGrid;
-}
+};
+
+export const breadthFirstSearchForDestroyWoodNode = (
+  grid: IGrid,
+  player: IPlayer,
+  bombsAreaRemainingTime: { [key: string]: number } = {},
+  woodNode: IPosition,
+  allowedNodes?: TNodeValue[],
+  notAllowedNodes?: TNodeValue[],
+  nodesToStop?: TNodeValue[] | IPosition[]
+): INode[] => {
+  let queue: INode[] = [];
+  let inOrderVisitedArray: INode[] = [];
+  const startNode = getStartNodeFromGrid(grid);
+  if (!startNode) return [];
+  startNode.distance = 0;
+  startNode.isVisited = true;
+  queue.push(startNode);
+  while (!!queue.length) {
+    let neighbors = getUnvisitedNeighbors(
+      queue[0],
+      grid,
+      allowedNodes,
+      notAllowedNodes
+    );
+    updateNeightborNodes(queue[0], neighbors);
+    neighbors = neighbors.filter((node) => {
+      if (
+        node.value === BOMB_AFFECTED_NODE &&
+        bombsAreaRemainingTime[getCoordinateComboKey(node.row, node.col)] !==
+          undefined &&
+        getTimeForPlayerToNode(player, node) >
+          bombsAreaRemainingTime[getCoordinateComboKey(node.row, node.col)] -
+            TIME_FOR_PLACE_BOMB_AND_RUN
+      ) {
+        return false;
+      }
+      return true;
+    });
+    queue = [...queue, ...neighbors];
+    let nodeToTraverse = queue.shift();
+    if (nodeToTraverse) {
+      calculateNodeScoreToDestroyWoodNode(
+        grid,
+        nodeToTraverse,
+        player,
+        woodNode
+      );
+      inOrderVisitedArray.push(nodeToTraverse);
+    }
+    if (!nodeToTraverse) continue;
+    if (nodesToStop && nodesToStop.length > 0) {
+      if (isValueNodes(nodesToStop)) {
+        if (nodesToStop.includes(nodeToTraverse?.value)) {
+          nodeToTraverse.isDestination = true;
+          return inOrderVisitedArray;
+        }
+      } else if (
+        isPositionNodes(nodesToStop) &&
+        nodesToStop.some(
+          (p) => p.row === nodeToTraverse?.row && p.col === nodeToTraverse?.col
+        )
+      ) {
+        nodeToTraverse.isDestination = true;
+        return inOrderVisitedArray;
+      }
+    } else {
+      if (nodeToTraverse?.isDestination) return inOrderVisitedArray;
+    }
+  }
+  return inOrderVisitedArray;
+};
+
+export const calculateNodeScoreToDestroyWoodNode = (
+  grid: IGrid,
+  node: INode | undefined,
+  player: IPlayer,
+  woodNode: IPosition
+) => {
+  if (!node) return;
+  const { row, col } = node;
+  let score = 0;
+  if (GOOD_EGG_NODES.includes(node.value) && node.distance < 5) {
+    score++;
+    if (row - 1 > 0 && GOOD_EGG_NODES.includes(grid[row - 1][col].value)) {
+      score += 0.5;
+    }
+    if (
+      row + 1 < grid.length &&
+      GOOD_EGG_NODES.includes(grid[row + 1][col].value)
+    ) {
+      score += 0.5;
+    }
+    if (
+      col - 1 > 0 &&
+      [POWER_EGG_NODE, DELAY_EGG_NODE, SPEED_EGG_NODE].includes(
+        grid[row][col - 1].value
+      )
+    ) {
+      score += 0.5;
+    }
+    if (
+      col + 1 < grid[0].length &&
+      [POWER_EGG_NODE, DELAY_EGG_NODE, SPEED_EGG_NODE].includes(
+        grid[row][col + 1].value
+      )
+    ) {
+      score += 0.5;
+    }
+  }
+  for (let i = 1; i < player.power + 1; i++) {
+    if (row - i > 0) {
+      if (
+        grid[row - i][col].value === STONE_NODE ||
+        grid[row - i][col].value === EGG_NODE
+      ) {
+        break;
+      }
+      if (grid[row - i][col].value === WOOD_NODE) {
+        if (
+          grid[row - i][col].col === woodNode.col &&
+          grid[row - i][col].row === woodNode.row
+        ) {
+          score += 99;
+        }
+        score++;
+        break;
+      }
+    }
+  }
+  for (let i = 1; i < player.power + 1; i++) {
+    if (row < grid.length - i) {
+      if (
+        grid[row + i][col].value === STONE_NODE ||
+        grid[row + i][col].value === EGG_NODE
+      ) {
+        break;
+      }
+      if (grid[row + i][col].value === WOOD_NODE) {
+        if (
+          grid[row + i][col].col === woodNode.col &&
+          grid[row + i][col].row === woodNode.row
+        ) {
+          score += 99;
+        }
+        score++;
+        break;
+      }
+    }
+  }
+  for (let i = 1; i < player.power + 1; i++) {
+    if (col - i > 0) {
+      if (
+        grid[row][col - i].value === STONE_NODE ||
+        grid[row][col - i].value === EGG_NODE
+      ) {
+        break;
+      }
+      if (grid[row][col - i].value === WOOD_NODE) {
+        if (
+          grid[row][col - i].col === woodNode.col &&
+          grid[row][col - i].row === woodNode.row
+        ) {
+          score += 99;
+        }
+        score++;
+        break;
+      }
+    }
+  }
+  for (let i = 1; i < player.power + 1; i++) {
+    if (col < grid[0].length - i) {
+      if (
+        grid[row][col + i].value === STONE_NODE ||
+        grid[row][col + i].value === EGG_NODE
+      ) {
+        break;
+      }
+      if (grid[row][col + i].value === WOOD_NODE) {
+        if (
+          grid[row][col + i].col === woodNode.col &&
+          grid[row][col + i].row === woodNode.row
+        ) {
+          score += 99;
+        }
+        score++;
+        break;
+      }
+    }
+  }
+  node.score = score;
+};

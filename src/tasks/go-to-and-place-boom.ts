@@ -12,7 +12,7 @@ import {
   getShortestPath,
 } from "../algorithms/bredth-first-search";
 import { mainTaskStackSubject, socket } from "../app";
-import { BOMB_AFFECTED_NODE, CAN_GO_NODES, GOOD_EGG_NODES, NORMAL_NODE, POWER_EGG_NODE } from "../constants";
+import { BOMB_AFFECTED_NODE, CAN_GO_NODES, GOOD_EGG_NODES, MYS_EGG_NODE, NORMAL_NODE, POWER_EGG_NODE } from "../constants";
 import {
   IGloBalSubject,
   IMainStackAction,
@@ -28,10 +28,12 @@ export default class GoToAndPlaceBombTask extends BaseTask {
   thiz: GoToAndPlaceBombTask = this;
   destinationPosition: INode | undefined = undefined;
   escapingDestination: IPosition | undefined = undefined;
-  constructor(globalSubject: IGloBalSubject, destinationPosition?: INode) {
+  isMysIncluded: boolean = false;
+  constructor(globalSubject: IGloBalSubject, destinationPosition?: INode, isMysIncluded: boolean = false) {
     super(globalSubject);
     this.thiz = this;
     this.name = "go-to-and-place-bomb";
+    this.isMysIncluded = isMysIncluded;
     if (destinationPosition) {
       this.destinationPosition = destinationPosition;
     }
@@ -136,7 +138,7 @@ export default class GoToAndPlaceBombTask extends BaseTask {
       nodeGrid,
       player,
       bombsAreaRemainingTime,
-      [...CAN_GO_NODES, BOMB_AFFECTED_NODE],
+      this.isMysIncluded ? [...CAN_GO_NODES, BOMB_AFFECTED_NODE, MYS_EGG_NODE] : [...CAN_GO_NODES, BOMB_AFFECTED_NODE],
       undefined
     );
     let destinationNode = getDestinationNode(inOrderVisitedArray);

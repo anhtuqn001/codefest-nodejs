@@ -126,6 +126,7 @@ export const mainTaskStackSubject = new BehaviorSubject<{
     singleTarget?: INode | IPosition;
     comeToNextToPosition?: boolean;
     taskId?: string;
+    isMysIncluded?: boolean;
   };
 } | null>(null);
 
@@ -152,7 +153,7 @@ mainTaskStackSubject.subscribe((mainStackBehavior) => {
         }
         if(params?.taskName === "go-to-and-place-bomb" && params.singleTarget) {
 
-          task = new GoToAndPlaceBombTask(globalSubject, params.singleTarget as INode);
+          task = new GoToAndPlaceBombTask(globalSubject, params.singleTarget as INode, params.isMysIncluded);
         }
         if(params?.taskName === "kill-target") {
           mainTaskStack.addNewTask(new KillTarget(globalSubject));
@@ -232,6 +233,7 @@ socket.on("join game", (res) => {
   console.log("[Socket] join-game responsed", res);
 });
 let preLives = 0;
+let mysEgg = 0;
 let isPreventing = false;
 let lastBombPlaced = 0;
 //API-2
@@ -270,12 +272,11 @@ socket.on("ticktack player", (res) => {
   //   lastBomb = Date.now();
   //   isPreventing = true;
   // }
-  // if (bombs.length === 0 && isPreventing) {
-  //   console.log('time bomb flash disapper', Date.now() - lastBomb);
-  //   isPreventing = false;
-  // }
-  // console.log('player', player?.speed);
-  console.log('player', player?.currentPosition.row + "|" + player?.currentPosition.col);
+  if (player?.dragonEggMystic && player?.dragonEggMystic > mysEgg) {
+    console.log('mys eggggggggggggggggggggggggggggggggggggggggggg');
+    mysEgg = player?.dragonEggMystic;
+  } 
+  // console.log('player', player?.currentPosition.row + "|" + player?.currentPosition.col);
   if (player?.lives) {
     if (player?.lives - preLives < 0) {
       console.log('woundedddddddddddddddddddddddddddddddddddddddddddddddddddddddddd');

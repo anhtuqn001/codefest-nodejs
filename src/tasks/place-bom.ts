@@ -167,11 +167,10 @@ export default class PlaceBombTask extends BaseTask {
     );
 
     if (this.bombPlaced && !bombs.find(b => b.col === this.bombPlaced?.col && b.row === this.bombPlaced.row)) {
-      // if (isPlayerIsInDangerousArea(players, bombs, nodeGrid)) {
-      //   console.log('escapeeeeeee');
-      //   this.escapeFromBomb(player, mapInfo);
-      //   return;
-      // }
+      if (isPlayerIsInDangerousArea(players, bombs, nodeGrid)) {
+        this.escapeFromBomb(player, mapInfo);
+        return;
+      }
       this.bombPlaced = undefined;
     }
 

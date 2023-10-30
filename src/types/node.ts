@@ -28,7 +28,8 @@ export enum TNodeValue {
   POWER_EGG_NODE = 4,
   DELAY_EGG_NODE = 7,
   OPPONENT_NODE = 12,
-  DANGEROUS_BOMB_AFFECTED_NODE = 13
+  DANGEROUS_BOMB_AFFECTED_NODE = 13,
+  BOMB_NODE = 14
 }
 
 export interface IPosition {

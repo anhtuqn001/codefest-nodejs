@@ -7,7 +7,7 @@ import destroywoodAdviser from "./destroy-wood-adviser";
 
 const killTargetAdviser = ({ map }: IMapInfo) => {
   const allTasks = mainTaskStack.getAllTasks();
-  const isThereFewWoodNode = map.flat().filter(n => n === WOOD_NODE).length <= 10
+  const isThereFewWoodNode = map.length > 0 && map.flat().filter(n => n === WOOD_NODE).length <= 10
   if (allTasks?.length === 0 && isThereFewWoodNode) {
     mainTaskStack.addNewTask(new KillTarget(globalSubject));
   }

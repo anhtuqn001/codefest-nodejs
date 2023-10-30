@@ -20,6 +20,10 @@ export default class MainTaskStack {
     this.currentTasks.push(task);
   };
 
+  clearTasks = () => {
+    this.currentTasks = [];
+  }
+
   disposeTask = (taskId: string) => {
     this.currentTasks.filter((task) => task.id === taskId);
   };
