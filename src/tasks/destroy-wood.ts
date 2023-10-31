@@ -1,5 +1,6 @@
 import {
   calculateTimeIfHaveDistance,
+  drivePlayer,
   getBestLand,
   getCoordinateComboKey,
   getDestinationNode,
@@ -133,6 +134,7 @@ export default class DestroyWoodTask extends BaseTask {
         }
         if (stringToShortestPath) {
           socket.emit("drive player", { direction: stringToShortestPath });
+          // drivePlayer(stringToShortestPath);
         }
       } else {
         this.stop(this.id);
@@ -176,6 +178,8 @@ export default class DestroyWoodTask extends BaseTask {
     if (totalDistance) {
       totalTime = calculateTimeIfHaveDistance(totalDistance, player);
     }
+    // console.log('totalDistance', totalDistance)
+    // console.log('totalTime', totalTime)
     if (totalTime < 1800) {
       return true;
     }
@@ -313,66 +317,69 @@ export default class DestroyWoodTask extends BaseTask {
     let isFictitious = false;
     let destinationNode = sortedInOrderVisitedArray[0];
     const fictitiousDestinationNode = fictitiousSortedInOrderVisitedArray[0];
-    console.log('destinationNode', destinationNode?.row + "|" + destinationNode?.col)
-    console.log('fictitiousDestinationNode', fictitiousDestinationNode?.row + "|" + fictitiousDestinationNode?.col)
-    // if (destinationNode && fictitiousDestinationNode && (destinationNode.row !== fictitiousDestinationNode.row || destinationNode.col !== fictitiousDestinationNode.col) ) {
-    //   const calculatedNode = this.calculateScoreIfPlaceBombAtDestination(destinationNode, mapInfo);
-    //   const calculatedFictitiousNode = this.calculateScoreIfPlaceBombAtDestination(fictitiousDestinationNode, mapInfo);
-    //   if (calculatedFictitiousNode.score && calculatedNode.score && calculatedFictitiousNode.score > calculatedNode.score) {
-    //     if (!this.checkIfTimeIsSpare(mapInfo, destinationNode, fictitiousDestinationNode)) {
-    //       destinationNode = fictitiousDestinationNode;
-    //       isFictitious = true;
-    //     }
-    //   }
-    // }
-    // if (!destinationNode) {
-    //   // open road
-    //   const { grid: tempGrid, bombsAreaRemainingTime } = createGrid(map, player.currentPosition, spoils, bombs, players);
-    //   const inOderVisitedArray = dijktra(tempGrid, player, {}, [...CAN_GO_NODES, WOOD_NODE, BOMB_AFFECTED_NODE, BOMB_NODE, MYS_EGG_NODE], undefined, grid.flat().filter(node => node.value === WOOD_NODE));
-    //   const destination = getDestinationNode(inOderVisitedArray);
-    //   this.pause();
-    //   mainTaskStackSubject.next({
-    //     action: IMainStackAction.ADD,
-    //     params: {
-    //       taskName: "open-road",
-    //       singleTarget: destination
-    //     },
-    //   });
-    // }
-    // if (destinationNode && destinationNode.score !== 0) {
-    //   this.pause();
-    //   this.lastDestinationNode = destinationNode;
-    //   mainTaskStackSubject.next({
-    //     action: IMainStackAction.ADD,
-    //     params: {
-    //       taskName: "go-to-and-place-bomb",
-    //       singleTarget: destinationNode,
-    //       isFictitious
-    //     },
-    //   });
-    // } else {
-    //   const woodNodesCoordinates = grid
-    //     .flat()
-    //     .filter((node) => node.value === WOOD_NODE)
-    //     .map((node) => getCoordinateComboKey(node.row, node.col));
-    //   if (
-    //     !woodNodesCoordinates.some((item) => {
-    //       if (this.bestLand) {
-    //         if (this.bestLand[item]) {
-    //           return true;
-    //         }
-    //       }
-    //       return false;
-    //     })
-    //   ) {
-    //     this.stop(this.id);
-    //   } else {
-    //     if (isPlayerIsInDangerousArea(players, bombs, grid)) {
-    //       this.escapeFromBomb(player, mapInfo);
-    //       return;
-    //     }
-    //   }
-    // }
+    // console.log('destinationNode', destinationNode?.row + "|" + destinationNode?.col + "|" + destinationNode?.score)
+    // console.log('fictitiousDestinationNode', fictitiousDestinationNode?.row + "|" + fictitiousDestinationNode?.col + "|" + fictitiousDestinationNode?.score);
+    console.log(destinationNode && fictitiousDestinationNode && (destinationNode.row !== fictitiousDestinationNode.row || destinationNode.col !== fictitiousDestinationNode.col));
+    if (destinationNode && fictitiousDestinationNode && (destinationNode.row !== fictitiousDestinationNode.row || destinationNode.col !== fictitiousDestinationNode.col)) {
+      const calculatedNode = this.calculateScoreIfPlaceBombAtDestination(destinationNode, mapInfo);
+      const calculatedFictitiousNode = this.calculateScoreIfPlaceBombAtDestination(fictitiousDestinationNode, mapInfo);
+      // console.log('calculatedFictitiousNode.score', calculatedFictitiousNode.score)
+      // console.log('calculatedNode.score', calculatedNode.score)
+      if (calculatedFictitiousNode.score && calculatedNode.score && (calculatedFictitiousNode.score - (calculatedFictitiousNode.distance/STEP_BOMB_RATIO)) > calculatedNode.score - (calculatedNode.distance/STEP_BOMB_RATIO)) {
+        if (!this.checkIfTimeIsSpare(mapInfo, destinationNode, fictitiousDestinationNode)) {
+          destinationNode = fictitiousDestinationNode;
+          isFictitious = true;
+        }
+      }
+    }
+    if (!destinationNode) {
+      // open road
+      const { grid: tempGrid, bombsAreaRemainingTime } = createGrid(map, player.currentPosition, spoils, bombs, players);
+      const inOderVisitedArray = dijktra(tempGrid, player, {}, [...CAN_GO_NODES, WOOD_NODE, BOMB_AFFECTED_NODE, BOMB_NODE, MYS_EGG_NODE], undefined, grid.flat().filter(node => node.value === WOOD_NODE));
+      const destination = getDestinationNode(inOderVisitedArray);
+      this.pause();
+      mainTaskStackSubject.next({
+        action: IMainStackAction.ADD,
+        params: {
+          taskName: "open-road",
+          singleTarget: destination
+        },
+      });
+    }
+    if (destinationNode && destinationNode.score !== 0) {
+      this.pause();
+      this.lastDestinationNode = destinationNode;
+      mainTaskStackSubject.next({
+        action: IMainStackAction.ADD,
+        params: {
+          taskName: "go-to-and-place-bomb",
+          singleTarget: destinationNode,
+          isFictitious
+        },
+      });
+    } else {
+      const woodNodesCoordinates = grid
+        .flat()
+        .filter((node) => node.value === WOOD_NODE)
+        .map((node) => getCoordinateComboKey(node.row, node.col));
+      if (
+        !woodNodesCoordinates.some((item) => {
+          if (this.bestLand) {
+            if (this.bestLand[item]) {
+              return true;
+            }
+          }
+          return false;
+        })
+      ) {
+        this.stop(this.id);
+      } else {
+        if (isPlayerIsInDangerousArea(players, bombs, grid)) {
+          this.escapeFromBomb(player, mapInfo);
+          return;
+        }
+      }
+    }
   };
 
   isThereWayToDestroyLand = (map: IMapInfo, landPositions: IPosition[]) => {
