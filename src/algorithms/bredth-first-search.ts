@@ -247,15 +247,12 @@ export const createGrid = (
   const numberOfCol = rawGrid[0].length;
   const opponent = getOpponent(players);
   const bombsWithPower = getMappedBombWithPower(bombs, players);
-  console.log("bombWithPower", bombsWithPower);
   const { bombsAreaMap, bombsAreaRemainingTime } = getBombAffectedAreaMapV3(
     rawGrid,
     bombsWithPower,
     numberOfRow,
     numberOfCol
   );
-  console.log("bombsAreaMap", bombsAreaMap);
-  console.log("bombsAreaRemainingTime", bombsAreaRemainingTime);
   const keyValueSpoils: { [key: string]: number } = {};
   spoils?.forEach((spoil) => {
     keyValueSpoils[getCoordinateComboKey(spoil.row, spoil.col)] =
@@ -1297,24 +1294,6 @@ export const breadthFirstSearchWithScore = (
 
     if (!nodeToTraverse) continue;
     if (nodeToTraverse?.isDestination) return inOrderVisitedArray;
-    // if (nodesToStop && nodesToStop.length > 0) {
-    //   if (isValueNodes(nodesToStop)) {
-    //     if (nodesToStop.includes(nodeToTraverse?.value)) {
-    //       nodeToTraverse.isDestination = true;
-    //       return inOrderVisitedArray;
-    //     }
-    //   } else if (
-    //     isPositionNodes(nodesToStop) &&
-    //     nodesToStop.some(
-    //       (p) => p.row === nodeToTraverse?.row && p.col === nodeToTraverse?.col
-    //     )
-    //   ) {
-    //     nodeToTraverse.isDestination = true;
-    //     return inOrderVisitedArray;
-    //   }
-    // } else {
-    //   if (nodeToTraverse?.isDestination) return inOrderVisitedArray;
-    // }
   }
   return inOrderVisitedArray;
 };

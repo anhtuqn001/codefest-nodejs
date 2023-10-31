@@ -1,4 +1,5 @@
 import {
+  calculateTimeIfHaveDistance,
   getBestLand,
   getCoordinateComboKey,
   getDestinationNode,
@@ -139,6 +140,99 @@ export default class DestroyWoodTask extends BaseTask {
     }
   };
 
+  checkIfTimeIsSpare = (mapInfo: IMapInfo, destinationNode: INode, fictitiousDestinationNode: INode) => {
+    const { map, spoils, bombs, players } = mapInfo;
+    const player = getPlayer(players);
+    if (!player || !destinationNode || !fictitiousDestinationNode) return false;
+    let totalDistance = 0;
+    const { grid: nodeGrid } = createGrid(map, player.currentPosition, spoils, bombs, players);
+
+    const inOrderVisitedArray = breadthFirstSearch(
+      nodeGrid,
+      player,
+      {},
+      [...CAN_GO_NODES, BOMB_AFFECTED_NODE, BOMB_NODE],
+      undefined,
+      [destinationNode]
+    );
+    const destinationNodeFromUser = getDestinationNode(inOrderVisitedArray);
+
+    const { grid: fictitiousNodeGrid } = createGrid(map, { row: destinationNode.row, col: destinationNode.col }, spoils, bombs, players);
+
+    const ficititiousInOrderVisitedArray = breadthFirstSearch(
+      fictitiousNodeGrid,
+      player,
+      {},
+      [...CAN_GO_NODES, BOMB_AFFECTED_NODE, BOMB_NODE],
+      undefined,
+      [fictitiousDestinationNode]
+    );
+    const fictitiousDestinationNodeFromDestinationNode = getDestinationNode(ficititiousInOrderVisitedArray);
+
+    if (destinationNodeFromUser && fictitiousDestinationNodeFromDestinationNode) {
+      totalDistance = destinationNodeFromUser.distance + fictitiousDestinationNodeFromDestinationNode.distance;
+    }
+    let totalTime = Infinity;
+    if (totalDistance) {
+      totalTime = calculateTimeIfHaveDistance(totalDistance, player);
+    }
+    if (totalTime < 1800) {
+      return true;
+    }
+    return false;
+  }
+
+  calculateScoreIfPlaceBombAtDestination = (destinationNode: INode, mapInfo: IMapInfo): INode => {
+    const { map, players, spoils, bombs } = mapInfo;
+    const player = getPlayer(players);
+    const { score: prevScore } = destinationNode;
+    if (!this.bestLand || !player || !prevScore) return destinationNode;
+    const fictitiousBombs = [...bombs, { row: destinationNode.row, col: destinationNode.col, remainTime: 2000, playerId: PLAYER_ID }];
+    const { grid, bombsAreaRemainingTime } = createDestroyWoodGrid(
+      map,
+      destinationNode,
+      fictitiousBombs,
+      players,
+      spoils,
+      this.bestLand
+    );
+    const fictitiousPlayer = {
+      ...player,
+      row: destinationNode.row,
+      col: destinationNode.col
+    }
+    const fictitiousInOrderVisitedArray = breadthFirstSearchWithScore(
+      grid,
+      fictitiousPlayer,
+      {},
+      [...CAN_GO_NODES, BOMB_AFFECTED_NODE, BOMB_NODE],
+      undefined
+    );
+
+    const fictitiousSortedInOrderVisitedArray = fictitiousInOrderVisitedArray.filter((node) => {
+      if (node?.score === undefined || node?.score === null) return true;
+      return node.score > 0;
+    }).sort(
+      (a: INode, b: INode) => {
+        if (b?.score !== undefined && a?.score !== undefined) {
+          // return (
+          //   (b?.score -
+          //     b.distance / STEP_BOMB_RATIO) -
+          //   (a?.score - a.distance / STEP_BOMB_RATIO)
+          // );
+          return (b.score - a.score);
+        }
+        return 0;
+      }
+    );
+    const fictitiousDestinationNode = fictitiousSortedInOrderVisitedArray[0];
+    if (fictitiousDestinationNode?.score) {
+      destinationNode.score = prevScore + fictitiousDestinationNode.score; 
+      return destinationNode;
+    }
+    return destinationNode;
+  } 
+
   destroyLand = (mapInfo: IMapInfo) => {
     const { map, players, spoils, bombs, tag, player_id } = mapInfo;
     const player = getPlayer(players);
@@ -156,10 +250,10 @@ export default class DestroyWoodTask extends BaseTask {
       this.bestLand
     );
 
-    const gridWithoutBomb = createDestroyWoodGrid(
+    const { grid: grid2 } = createDestroyWoodGrid(
       map,
       player.currentPosition,
-      [],
+      bombs,
       players,
       spoils,
       this.bestLand
@@ -173,12 +267,13 @@ export default class DestroyWoodTask extends BaseTask {
       undefined
     );
 
-    // const inOrderVisitedArrayWithoutBomb = breadthFirstSearchWithScore(
-    //   gridWithoutBomb,
-    //   player.power,
-    //   CAN_GO_NODES,
-    //   undefined
-    // );
+    const fictitiousInOrderVisitedArray = breadthFirstSearchWithScore(
+      grid2,
+      player,
+      {},
+      [...CAN_GO_NODES, BOMB_AFFECTED_NODE, BOMB_NODE],
+      undefined
+    );
 
     const filteredInOrderVisitedArray = inOrderVisitedArray.filter((node) => {
       if (node?.score === undefined || node?.score === null) return true;
@@ -193,66 +288,91 @@ export default class DestroyWoodTask extends BaseTask {
               b.distance / STEP_BOMB_RATIO) -
             (a?.score - a.distance / STEP_BOMB_RATIO)
           );
-          // return b.score - a.score;
+          // return (b.score - a.score);
         }
         return 0;
       }
     );
-    const destinationNode = sortedInOrderVisitedArray[0];
-    console.log('destroy-wood destinationNode', destinationNode);
-    if (!destinationNode) {
-      // open road
-      const { grid: tempGrid, bombsAreaRemainingTime } = createGrid(map, player.currentPosition, spoils, bombs, players);
-      const inOderVisitedArray = dijktra(tempGrid, player, {}, [...CAN_GO_NODES, WOOD_NODE, BOMB_AFFECTED_NODE, BOMB_NODE, MYS_EGG_NODE], undefined, grid.flat().filter(node => node.value === WOOD_NODE));
-      const destination = getDestinationNode(inOderVisitedArray);
-      this.pause();
-      mainTaskStackSubject.next({
-        action: IMainStackAction.ADD,
-        params: {
-          taskName: "open-road",
-          singleTarget: destination
-        },
-      });
-    }
-    // const destinationNodeWithoutBomb = sortedInOrderVisitedArrayWithoutBomb[0];
-    // if (destinationNodeWithoutBomb && destinationNode && (destinationNodeWithoutBomb.col !== destinationNode.col || destinationNodeWithoutBomb.row !== destinationNode.row)) {
-    //   if (destinationNodeWithoutBomb.distance - destinationNode.distance > 8) {
-    //     this.destinationNodeWithoutBomb = destinationNodeWithoutBomb;
+    
+    const fictitiousSortedInOrderVisitedArray = fictitiousInOrderVisitedArray.filter((node) => {
+      if (node?.score === undefined || node?.score === null) return true;
+      return node.score > 0;
+    }).sort(
+      (a: INode, b: INode) => {
+        if (b?.score !== undefined && a?.score !== undefined) {
+          return (
+            (b?.score -
+              b.distance / STEP_BOMB_RATIO) -
+            (a?.score - a.distance / STEP_BOMB_RATIO)
+          );
+          // return (b.score - a.score);
+        }
+        return 0;
+      }
+    );
+    let isFictitious = false;
+    let destinationNode = sortedInOrderVisitedArray[0];
+    const fictitiousDestinationNode = fictitiousSortedInOrderVisitedArray[0];
+    console.log('destinationNode', destinationNode?.row + "|" + destinationNode?.col)
+    console.log('fictitiousDestinationNode', fictitiousDestinationNode?.row + "|" + fictitiousDestinationNode?.col)
+    // if (destinationNode && fictitiousDestinationNode && (destinationNode.row !== fictitiousDestinationNode.row || destinationNode.col !== fictitiousDestinationNode.col) ) {
+    //   const calculatedNode = this.calculateScoreIfPlaceBombAtDestination(destinationNode, mapInfo);
+    //   const calculatedFictitiousNode = this.calculateScoreIfPlaceBombAtDestination(fictitiousDestinationNode, mapInfo);
+    //   if (calculatedFictitiousNode.score && calculatedNode.score && calculatedFictitiousNode.score > calculatedNode.score) {
+    //     if (!this.checkIfTimeIsSpare(mapInfo, destinationNode, fictitiousDestinationNode)) {
+    //       destinationNode = fictitiousDestinationNode;
+    //       isFictitious = true;
+    //     }
     //   }
     // }
-    if (destinationNode && destinationNode.score !== 0) {
-      this.pause();
-      this.lastDestinationNode = destinationNode;
-      mainTaskStackSubject.next({
-        action: IMainStackAction.ADD,
-        params: {
-          taskName: "go-to-and-place-bomb",
-          singleTarget: destinationNode,
-        },
-      });
-    } else {
-      const woodNodesCoordinates = grid
-        .flat()
-        .filter((node) => node.value === WOOD_NODE)
-        .map((node) => getCoordinateComboKey(node.row, node.col));
-      if (
-        !woodNodesCoordinates.some((item) => {
-          if (this.bestLand) {
-            if (this.bestLand[item]) {
-              return true;
-            }
-          }
-          return false;
-        })
-      ) {
-        this.stop(this.id);
-      } else {
-        if (isPlayerIsInDangerousArea(players, bombs, grid)) {
-          this.escapeFromBomb(player, mapInfo);
-          return;
-        }
-      }
-    }
+    // if (!destinationNode) {
+    //   // open road
+    //   const { grid: tempGrid, bombsAreaRemainingTime } = createGrid(map, player.currentPosition, spoils, bombs, players);
+    //   const inOderVisitedArray = dijktra(tempGrid, player, {}, [...CAN_GO_NODES, WOOD_NODE, BOMB_AFFECTED_NODE, BOMB_NODE, MYS_EGG_NODE], undefined, grid.flat().filter(node => node.value === WOOD_NODE));
+    //   const destination = getDestinationNode(inOderVisitedArray);
+    //   this.pause();
+    //   mainTaskStackSubject.next({
+    //     action: IMainStackAction.ADD,
+    //     params: {
+    //       taskName: "open-road",
+    //       singleTarget: destination
+    //     },
+    //   });
+    // }
+    // if (destinationNode && destinationNode.score !== 0) {
+    //   this.pause();
+    //   this.lastDestinationNode = destinationNode;
+    //   mainTaskStackSubject.next({
+    //     action: IMainStackAction.ADD,
+    //     params: {
+    //       taskName: "go-to-and-place-bomb",
+    //       singleTarget: destinationNode,
+    //       isFictitious
+    //     },
+    //   });
+    // } else {
+    //   const woodNodesCoordinates = grid
+    //     .flat()
+    //     .filter((node) => node.value === WOOD_NODE)
+    //     .map((node) => getCoordinateComboKey(node.row, node.col));
+    //   if (
+    //     !woodNodesCoordinates.some((item) => {
+    //       if (this.bestLand) {
+    //         if (this.bestLand[item]) {
+    //           return true;
+    //         }
+    //       }
+    //       return false;
+    //     })
+    //   ) {
+    //     this.stop(this.id);
+    //   } else {
+    //     if (isPlayerIsInDangerousArea(players, bombs, grid)) {
+    //       this.escapeFromBomb(player, mapInfo);
+    //       return;
+    //     }
+    //   }
+    // }
   };
 
   isThereWayToDestroyLand = (map: IMapInfo, landPositions: IPosition[]) => {
@@ -266,26 +386,17 @@ export default class DestroyWoodTask extends BaseTask {
     )
       return;
     if (!mapInfo) {
-      // this.stop(this.id);
       return;
     }
     const { map, players } = mapInfo;
     const player = getPlayer(players);
     if (!player) {
-      // this.stop(this.id);
       return;
     }
     if (this.escapingDestination) {
       this.escapeFromBomb(player, mapInfo);
       return;
   }
-    // const landSeaRawGrid = getLandSeaRawGrid(map);
-    // const bestLand = getBestLand(landSeaRawGrid);
-    // if (!bestLand) {
-    //   console.log('stopped');
-    //   this.stop(this.id);
-    //   return;
-    // }
     if (!this.bestLand) {
       const landSeaRawGrid = getLandSeaRawGrid(map);
       const { bestLand } = getBestLand(mapInfo, landSeaRawGrid);
@@ -294,43 +405,5 @@ export default class DestroyWoodTask extends BaseTask {
     if (this.bestLand) {
       this.destroyLand(mapInfo);
     }
-    // const isPlayerInBestLand =
-    //   this.bestLand[
-    //     getCoordinateComboKey(
-    //       player.currentPosition.row,
-    //       player.currentPosition.col
-    //     )
-    //   ];
-    // this.bestLand[
-    //   getCoordinateComboKey(
-    //     player.currentPosition.row,
-    //     player.currentPosition.col
-    //   )
-    // ];
-    // if (!isPlayerInBestLand) {
-    //   let start = performance.now();
-    //   const nearestPosition = this.findNearestPositionOfBestLand(
-    //     bestLand,
-    //     player,
-    //     mapInfo
-    //   );
-    //   let end = performance.now();
-    //   let time = end - start;
-    //   console.log("Execution time: " + time);
-    //   this.pause();
-    //   mainTaskStackSubject.next({
-    //     action: IMainStackAction.ADD,
-    //     params: {
-    //       taskName: "go-to",
-    //       target: [nearestPosition],
-    //     },
-    //   });
-    //   return;
-    // } else {
-    //   // user is in the best land
-    //   this.destroyLand(mapInfo);
-    // }
-
-    // this.stop(this.id);
   };
 }

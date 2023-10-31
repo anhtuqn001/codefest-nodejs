@@ -464,6 +464,10 @@ export const getTimeForPlayerToNode = (player: IPlayer, node: INode) => {
   return node.distance * getSpeed(player);
 }
 
+export const calculateTimeIfHaveDistance = (distance: number, player: IPlayer) => {
+  return distance * getSpeed(player);
+}
+
 // export const checkIfBombPlayerHereCanReachTarget = (player: IPlayer, bombPosition: IPosition, target: IPosition) => {
 //   powe
 //   for(let i = 0; i < )

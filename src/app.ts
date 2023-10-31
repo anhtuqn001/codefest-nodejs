@@ -127,6 +127,7 @@ export const mainTaskStackSubject = new BehaviorSubject<{
     comeToNextToPosition?: boolean;
     taskId?: string;
     isMysIncluded?: boolean;
+    isFictitious?: boolean;
   };
 } | null>(null);
 
@@ -153,7 +154,7 @@ mainTaskStackSubject.subscribe((mainStackBehavior) => {
         }
         if(params?.taskName === "go-to-and-place-bomb" && params.singleTarget) {
 
-          task = new GoToAndPlaceBombTask(globalSubject, params.singleTarget as INode, params.isMysIncluded);
+          task = new GoToAndPlaceBombTask(globalSubject, params.singleTarget as INode, params.isMysIncluded, params.isFictitious);
         }
         if(params?.taskName === "kill-target") {
           mainTaskStack.addNewTask(new KillTarget(globalSubject));
@@ -294,15 +295,5 @@ socket.on("ticktack player", (res) => {
 
 //API-3b
 socket.on("drive player", (res) => {
-  // console.log("[Socket] drive-player responsed, res: ", res);
   const tasks = mainTaskStack.getAllTasks();
-  // console.log('drive player res', res);
-
-  // if (res.direction.includes('b') && res.player_id === PLAYER_ID && !tasks.some(t => t.name === 'collect-item')) {
-  //   of("1")
-  //   .pipe(delay(2300)).subscribe(() => {
-  //     // collectItemAdviserSubject.next(null);
-  //     collectItemAdviser()
-  //   })
-  // }
 });

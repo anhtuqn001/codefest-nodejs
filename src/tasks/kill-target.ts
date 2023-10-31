@@ -137,7 +137,6 @@ export default class KillTarget extends BaseTask {
           //There is no way to reach the target
           if (!destinationNodeWithWoodOnWay) {
             this.pause();
-            console.log('kill-target destinationNode', destinationNode.row + "|" + destinationNode.col + "|" + destinationNode.value);
             mainTaskStackSubject.next({
               action: IMainStackAction.ADD,
               params: {
@@ -147,7 +146,6 @@ export default class KillTarget extends BaseTask {
             });
             return;
           } else {
-            console.log('here 1')
             this.pause();
             mainTaskStackSubject.next({
               action: IMainStackAction.ADD,
@@ -159,7 +157,6 @@ export default class KillTarget extends BaseTask {
             return;
           }
         } else {
-          console.log('here 2')
           if (isPlayerIsInDangerousArea(players, bombs, grid)) {
             this.escapeFromBomb(player, mapInfo);
             return;
@@ -167,7 +164,6 @@ export default class KillTarget extends BaseTask {
           return;
         }
       } else {
-        console.log('here 3')
         if (isPlayerIsInDangerousArea(players, bombs, grid)) {
           this.escapeFromBomb(player, mapInfo);
           return;

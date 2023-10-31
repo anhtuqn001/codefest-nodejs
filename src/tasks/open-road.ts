@@ -45,7 +45,6 @@ export default class OpenRoad extends BaseTask {
     this.thiz = this;
     this.name = "open-road";
     this.target = target;
-    console.log('open road this.target', this.target);
   }
 
   startTask() {
@@ -70,10 +69,6 @@ export default class OpenRoad extends BaseTask {
   // }
 
   getNodeToDestroy(shortestPath: INode[], mapInfo: IMapInfo) {
-    console.log(
-      "shortestPath",
-      shortestPath.map((node) => node.row + "|" + node.col)
-    );
     const { map, spoils, bombs, players } = mapInfo;
     let currentNode = undefined;
     let withMys = false;
@@ -84,7 +79,6 @@ export default class OpenRoad extends BaseTask {
         withMys: false,
       };
     const destination = shortestPath[shortestPath.length - 1];
-    console.log('getNodeToDestroy destination', destination.row + "|" + destination.col);
     if (destination) {
       let coppiedDestination = destination;
       while (coppiedDestination.previousNode) {
@@ -100,7 +94,6 @@ export default class OpenRoad extends BaseTask {
       if (currentNode) {
         if (currentNode.value === WOOD_NODE) {
           if (isWoodBeingAffectedByBombs(mapInfo, currentNode)) {
-            console.log('2')
             return {
               node: undefined,
               withMys: false,
@@ -230,7 +223,6 @@ export default class OpenRoad extends BaseTask {
       this.stop(this.id);
       return;
     }
-    // console.log("open-road this.target", this.target);
     const { grid: nodeGrid, bombsAreaRemainingTime } = createGrid(
       map,
       player.currentPosition,
@@ -256,9 +248,6 @@ export default class OpenRoad extends BaseTask {
       shortestPath,
       mapInfo
     );
-    console.log('this.target', this.target.row + "|" + this.target.col);
-    console.log('open road tempDestinationNode', tempDestinationNode?.row + "|" + tempDestinationNode?.col)
-    console.log('open road withMys', withMys);
     if (withMys) {
       let tempDestinationNodeValues = "";
       let coppiedtempDestinationNode = tempDestinationNode;
@@ -280,8 +269,6 @@ export default class OpenRoad extends BaseTask {
       }
       return;
     } else {
-      // console.log('tempDestinationNode', tempDestinationNode )
-      // console.log('target', this.target )
       if (isSamePosition(tempDestinationNode, this.target)) {
         const { grid: nodeGrid, bombsAreaRemainingTime } = createGrid(
           map,
@@ -333,24 +320,6 @@ export default class OpenRoad extends BaseTask {
           this.stop(this.id);
           return;
         }
-        // if (tempDestinationNode && withMys) {
-        //   if (this.previousWithMys) {
-        //     mainTaskStackSubject.next({
-        //       action: IMainStackAction.ADD,
-        //       params: {
-        //         taskName: "go-to-and-place-bomb",
-        //         singleTarget: tempDestinationNode,
-        //         isMysIncluded: true,
-        //       },
-        //     });
-        //     this.stop(this.id);
-        //     return;
-        //   }
-        //   this.previousWithMys = withMys;
-        //   return;
-        // }
-        // this.pause();
-        // console.log('open-road tempDestinationNode', tempDestinationNode.row + "|" + tempDestinationNode.col)
       }
     }
   };

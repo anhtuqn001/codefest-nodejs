@@ -29,11 +29,13 @@ export default class GoToAndPlaceBombTask extends BaseTask {
   destinationPosition: INode | undefined = undefined;
   escapingDestination: IPosition | undefined = undefined;
   isMysIncluded: boolean = false;
-  constructor(globalSubject: IGloBalSubject, destinationPosition?: INode, isMysIncluded: boolean = false) {
+  isFictitious: boolean = false;
+  constructor(globalSubject: IGloBalSubject, destinationPosition?: INode, isMysIncluded: boolean = false, isFictitious: boolean = false) {
     super(globalSubject);
     this.thiz = this;
     this.name = "go-to-and-place-bomb";
     this.isMysIncluded = isMysIncluded;
+    this.isFictitious = isFictitious;
     if (destinationPosition) {
       this.destinationPosition = destinationPosition;
     }
@@ -107,6 +109,21 @@ export default class GoToAndPlaceBombTask extends BaseTask {
     if (this.escapingDestination) {
         this.escapeFromBomb(player, mapInfo);
         return;
+    }
+    if (this.isFictitious) {
+      const { grid: nodeGrid } = createGrid(
+        map,
+        player.currentPosition,
+        spoils,
+        bombs,
+        players,
+        this.destinationPosition
+      );
+      if (isPlayerIsInDangerousArea(players, bombs, nodeGrid)) {
+        this.escapeFromBomb(player, mapInfo);
+      }
+      this.stop(this.id)
+      return;
     }
     if (!this.destinationPosition) return;
     if (
