@@ -1,6 +1,9 @@
+import { isSettingUpBombSubject, lastBombPlacedTimeSubject, shouldDriveSubject, socket } from "../app";
 import {
   BOMB_AFFECTED_NODE,
+  BOMB_SETUP_DELAY,
   CAN_GO_NODES,
+  DELAY_SPEED_MAPPING,
   EGG_NODE,
   EGG_SPEED_MAPPING,
   MYS_EGG_NODE,
@@ -429,10 +432,10 @@ export const findNearestPositionOfBestLand = (mapInfo: IMapInfo, coordinateCombo
   return destinationNode;
 }
 
-export const isPlayerIsInDangerousArea = (players: IPlayer[], bombs: IBomb[], nodeGrid: INode[][]): boolean => {
+export const isPlayerIsInDangerousArea = (rawGrid: IRawGrid,players: IPlayer[], bombs: IBomb[], nodeGrid: INode[][]): boolean => {
   const player = getPlayer(players);
   const bombsWithPower = getMappedBombWithPower(bombs, players);
-  const { bombsAreaMap } = getBombAffectedAreaMapV2(bombsWithPower, nodeGrid.length, nodeGrid[0].length)
+  const { bombsAreaMap } = getBombAffectedAreaMapV3(rawGrid, bombsWithPower, nodeGrid.length, nodeGrid[0].length)
   if (!player || bombs?.length === 0) return false;
   if (bombsAreaMap) {
     if (bombsAreaMap[player.currentPosition.row.toString()] && bombsAreaMap[player.currentPosition.row.toString()].includes(player.currentPosition.col)) {
@@ -481,3 +484,55 @@ export const isWoodBeingAffectedByBombs = (mapInfo: IMapInfo, woodPosition: IPos
   }
   return false
 } 
+let lastString = '';
+
+export const drivePlayer = (driveString: string, from?: string) => {
+  
+  const shouldDrive = shouldDriveSubject.value;
+  if (driveString === 'b') {
+    isSettingUpBombSubject.next(true);
+    socket.emit("drive player", { direction: driveString });
+    return;
+  } 
+  if (shouldDrive) {
+    console.log('from', from);
+    socket.emit("drive player", { direction: driveString });
+  }
+  shouldDriveSubject.next(false);
+    // if (!lastString.includes(driveString)) {
+      // socket.emit("drive player", { direction: 'x' });
+      
+  // }
+}
+
+export const getRemainingTimeToPlaceBomb = (player: IPlayer) => {
+  const delayEgg = player.dragonEggDelay > 3 ? 3 : player.dragonEggDelay;
+  const lastbomPlacedTime = lastBombPlacedTimeSubject.value;
+  const distanceTime = Date.now() - lastbomPlacedTime - BOMB_SETUP_DELAY;
+  const delayTime = DELAY_SPEED_MAPPING[delayEgg];
+  return delayTime - distanceTime;
+}
+
+export const isBombAvailable = (player: IPlayer) => {
+  const lastbomPlacedTime = lastBombPlacedTimeSubject.value;
+  const distanceTime = Date.now() - lastbomPlacedTime - BOMB_SETUP_DELAY;
+  const delayEgg = player.dragonEggDelay > 3 ? 3 : player.dragonEggDelay;
+  const delayTime = DELAY_SPEED_MAPPING[delayEgg];
+  return distanceTime > delayTime;
+}
+
+export const getOppositeString = (str: string) => {
+  if (str === '1') {
+    return '2'
+  }
+  if (str === '2') {
+    return '1'
+  }
+  if (str === '3') {
+    return '4'
+  }
+  if (str === '4') {
+    return '3'
+  }
+  return ''
+}

@@ -1,4 +1,4 @@
-import { findTargetGSTEgg, getDestinationNode, getPlayer, getStringPathFromShortestPath, isPlayerIsInDangerousArea } from "../algorithms";
+import { drivePlayer, findTargetGSTEgg, getDestinationNode, getPlayer, getStringPathFromShortestPath, isPlayerIsInDangerousArea } from "../algorithms";
 import { breadthFirstSearch, breadthFirstSearchToKillTarget, createGrid, createGridToAvoidBomb, getShortestPath } from "../algorithms/bredth-first-search";
 import { dijktraToKillTarget } from "../algorithms/dijktra";
 import { mainTaskStackSubject, socket } from "../app";
@@ -63,7 +63,8 @@ export default class KillTarget extends BaseTask {
           this.escapingDestination = { row: destinationNode.row, col: destinationNode.col};
         }
         if (stringToShortestPath) {
-          socket.emit("drive player", { direction: stringToShortestPath });
+          // socket.emit("drive player", { direction: stringToShortestPath });
+          drivePlayer(stringToShortestPath, 'kill-target');
         }
       } else {
         this.stop(this.id);
@@ -157,14 +158,14 @@ export default class KillTarget extends BaseTask {
             return;
           }
         } else {
-          if (isPlayerIsInDangerousArea(players, bombs, grid)) {
+          if (isPlayerIsInDangerousArea(map, players, bombs, grid)) {
             this.escapeFromBomb(player, mapInfo);
             return;
           }
           return;
         }
       } else {
-        if (isPlayerIsInDangerousArea(players, bombs, grid)) {
+        if (isPlayerIsInDangerousArea(map, players, bombs, grid)) {
           this.escapeFromBomb(player, mapInfo);
           return;
         }

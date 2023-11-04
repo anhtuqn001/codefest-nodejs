@@ -1,4 +1,5 @@
 import {
+  drivePlayer,
   getDestinationNode,
   getPlayer,
   getStringPathFromShortestPath,
@@ -191,7 +192,8 @@ export default class OpenRoad extends BaseTask {
           };
         }
         if (stringToShortestPath) {
-          socket.emit("drive player", { direction: stringToShortestPath });
+          // socket.emit("drive player", { direction: stringToShortestPath });
+          drivePlayer(stringToShortestPath, 'open-road escapeFromBomb');
         }
       } else {
         // this.stop(this.id);
@@ -263,7 +265,7 @@ export default class OpenRoad extends BaseTask {
       }
     }
     if (!tempDestinationNode) {
-      if (isPlayerIsInDangerousArea(players, bombs, nodeGrid)) {
+      if (isPlayerIsInDangerousArea(map, players, bombs, nodeGrid)) {
         this.escapeFromBomb(player, mapInfo);
         return;
       }
@@ -292,13 +294,14 @@ export default class OpenRoad extends BaseTask {
             shortestPath
           );
           if (stringPathToShortestPath) {
-            socket.emit("drive player", {
-              direction: stringPathToShortestPath,
-            });
+            // socket.emit("drive player", {
+            //   direction: stringPathToShortestPath,
+            // });
+            drivePlayer(stringPathToShortestPath, 'open-road openRoadObserver');
           }
           
         } else {
-          if (isPlayerIsInDangerousArea(players, bombs, nodeGrid)) {
+          if (isPlayerIsInDangerousArea(map, players, bombs, nodeGrid)) {
             this.escapeFromBomb(player, mapInfo);
             return;
           } else {

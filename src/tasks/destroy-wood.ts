@@ -19,7 +19,7 @@ import {
   getShortestPath,
 } from "../algorithms/bredth-first-search";
 import dijktra from "../algorithms/dijktra";
-import { mainTaskStackSubject, socket } from "../app";
+import { isSettingUpBombSubject, mainTaskStackSubject, socket } from "../app";
 import {
   BOMB_AFFECTED_NODE,
   BOMB_NODE,
@@ -57,10 +57,14 @@ export default class DestroyWoodTask extends BaseTask {
   passedNodes: IBestLandType = {};
   lastDestinationNode: INode | undefined = undefined;
   escapingDestination: IPosition | undefined = undefined;
+  isSettingUpBomb: boolean = false;
   // destinationNodeWithoutBomb: INode | undefined = undefined;
   constructor(globalSubject: IGloBalSubject) {
     super(globalSubject);
     this.thiz = this;
+    isSettingUpBombSubject.subscribe((isSettingUpBomb) => {
+      this.isSettingUpBomb = isSettingUpBomb
+    });
   }
 
   startTask = () => {
@@ -133,8 +137,8 @@ export default class DestroyWoodTask extends BaseTask {
           this.escapingDestination = { row: destinationNode.row, col: destinationNode.col};
         }
         if (stringToShortestPath) {
-          socket.emit("drive player", { direction: stringToShortestPath });
-          // drivePlayer(stringToShortestPath);
+          // socket.emit("drive player", { direction: stringToShortestPath });
+          drivePlayer(stringToShortestPath, 'destroy-wood');
         }
       } else {
         this.stop(this.id);
@@ -178,8 +182,6 @@ export default class DestroyWoodTask extends BaseTask {
     if (totalDistance) {
       totalTime = calculateTimeIfHaveDistance(totalDistance, player);
     }
-    // console.log('totalDistance', totalDistance)
-    // console.log('totalTime', totalTime)
     if (totalTime < 1800) {
       return true;
     }
@@ -317,14 +319,9 @@ export default class DestroyWoodTask extends BaseTask {
     let isFictitious = false;
     let destinationNode = sortedInOrderVisitedArray[0];
     const fictitiousDestinationNode = fictitiousSortedInOrderVisitedArray[0];
-    // console.log('destinationNode', destinationNode?.row + "|" + destinationNode?.col + "|" + destinationNode?.score)
-    // console.log('fictitiousDestinationNode', fictitiousDestinationNode?.row + "|" + fictitiousDestinationNode?.col + "|" + fictitiousDestinationNode?.score);
-    console.log(destinationNode && fictitiousDestinationNode && (destinationNode.row !== fictitiousDestinationNode.row || destinationNode.col !== fictitiousDestinationNode.col));
     if (destinationNode && fictitiousDestinationNode && (destinationNode.row !== fictitiousDestinationNode.row || destinationNode.col !== fictitiousDestinationNode.col)) {
       const calculatedNode = this.calculateScoreIfPlaceBombAtDestination(destinationNode, mapInfo);
       const calculatedFictitiousNode = this.calculateScoreIfPlaceBombAtDestination(fictitiousDestinationNode, mapInfo);
-      // console.log('calculatedFictitiousNode.score', calculatedFictitiousNode.score)
-      // console.log('calculatedNode.score', calculatedNode.score)
       if (calculatedFictitiousNode.score && calculatedNode.score && (calculatedFictitiousNode.score - (calculatedFictitiousNode.distance/STEP_BOMB_RATIO)) > calculatedNode.score - (calculatedNode.distance/STEP_BOMB_RATIO)) {
         if (!this.checkIfTimeIsSpare(mapInfo, destinationNode, fictitiousDestinationNode)) {
           destinationNode = fictitiousDestinationNode;
@@ -374,7 +371,7 @@ export default class DestroyWoodTask extends BaseTask {
       ) {
         this.stop(this.id);
       } else {
-        if (isPlayerIsInDangerousArea(players, bombs, grid)) {
+        if (isPlayerIsInDangerousArea(map, players, bombs, grid)) {
           this.escapeFromBomb(player, mapInfo);
           return;
         }
@@ -395,11 +392,19 @@ export default class DestroyWoodTask extends BaseTask {
     if (!mapInfo) {
       return;
     }
-    const { map, players } = mapInfo;
+    const { map, players, bombs, spoils } = mapInfo;
     const player = getPlayer(players);
     if (!player) {
       return;
     }
+    if (this.isSettingUpBomb) {
+      const { grid } = createGrid(map, player.currentPosition, spoils, bombs, players);
+      if (isPlayerIsInDangerousArea(map, players, bombs, grid)) {
+        this.escapeFromBomb(player, mapInfo);
+        return;
+      }
+    }
+
     if (this.escapingDestination) {
       this.escapeFromBomb(player, mapInfo);
       return;

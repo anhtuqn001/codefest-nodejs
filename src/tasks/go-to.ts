@@ -1,4 +1,5 @@
 import {
+  drivePlayer,
   getDestinationNode,
   getEndNode,
   getPlayer,
@@ -160,6 +161,7 @@ export default class GoToTask extends BaseTask {
         );
       }
     }
-    socket.emit("drive player", { direction: stringPathToShortestPath });
+    // socket.emit("drive player", { direction: stringPathToShortestPath });
+    drivePlayer(stringPathToShortestPath);
   };
 }

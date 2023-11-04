@@ -14,7 +14,7 @@ export const OPPONENT_NODE = 12;
 export const DANGEROUS_BOMB_AFFECTED_NODE = 13;
 export const BOMB_NODE = 14;
 
-export const GAME_ID = "da9c9c79-9c74-421b-8571-0e6bb6f0765a";   
+export const GAME_ID = "ec1b7ebf-956f-4116-ae56-01287c6f0e84";
 export const PLAYER_ID = "player1-xxx";
 
 export const CANNOT_GO_NODE = [STONE_NODE, WOOD_NODE, BOMB_AFFECTED_NODE, MYS_EGG_NODE, EGG_NODE, OPPONENT_NODE, HOLE_NODE, BOMB_NODE];
@@ -43,4 +43,13 @@ export const EGG_SPEED_MAPPING: { [key: string]: number} = {
     '2': 225.12
 } 
 
+export const DELAY_SPEED_MAPPING: { [key: string]: number} = {
+    '0': 2000,
+    '1': 1600,
+    '2': 1200,
+    '3': 800
+} 
+
 export const TIME_FOR_PLACE_BOMB_AND_RUN = 300;
+
+export const BOMB_SETUP_DELAY = 250;

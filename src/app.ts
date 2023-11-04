@@ -42,7 +42,7 @@ import killTargetAdviser from "./advisers/kill-target-adviser";
 import KillTarget from "./tasks/kill-target";
 import OpenRoad from "./tasks/open-road";
 
-const targetServer = "http://146.190.83.250/";
+const targetServer = "http://localhost/";
 
 const app = express();
 const port = 3000;
@@ -82,7 +82,6 @@ app.post("/:action", function (req, res) {
     socket.emit("drive player", { direction: '11111' });
   } else {
     if (req?.params?.action === 'b') {
-      console.log('place bomb');
     } 
     socket.emit("drive player", { direction: req?.params?.action });
   }
@@ -108,6 +107,10 @@ export const globalSubject = new BehaviorSubject<IMapInfo>({
   player_id: ''
 });
 
+export const shouldDriveSubject = new BehaviorSubject<boolean>(true);
+export const lastBombPlacedTimeSubject = new BehaviorSubject<number>(Date.now());
+export const isSettingUpBombSubject = new BehaviorSubject<boolean>(false);
+
 export const advisersSubject = new BehaviorSubject<IMapInfo>({
   map: [],
   bombs: [],
@@ -132,7 +135,6 @@ export const mainTaskStackSubject = new BehaviorSubject<{
 } | null>(null);
 
 
-mainTaskStackSubject.subscribe()
 
 mainTaskStackSubject.subscribe((mainStackBehavior) => {
   if (mainStackBehavior) {
@@ -246,6 +248,32 @@ socket.on("ticktack player", (res) => {
   const tag: ITag = res?.tag;
   const dragonEggGSTArray: IDragonEggGST[] = res?.map_info?.dragonEggGSTArray;
   const player_id: string = res?.player_id;
+  switch (tag) {
+    case 'player:be-isolated':
+      console.log('tag player:be-isolated');
+      break;
+    case 'player:moving-banned':
+    case 'player:back-to-playground':
+    case 'bomb:explosed':
+    // case 'bomb:setup':  
+    case 'player:moving-banned':
+      // console.log('tag',tag)
+      shouldDriveSubject.next(true);
+      break;
+    // case ''
+    default:
+  }
+  if (player_id === PLAYER_ID) {
+    if (tag === 'bomb:setup') {
+      console.log('tag',tag)
+      lastBombPlacedTimeSubject.next(Date.now());
+      shouldDriveSubject.next(true);
+      isSettingUpBombSubject.next(false);
+    }
+    if (tag === 'player:pick-spoil') {
+      shouldDriveSubject.next(true);
+    }
+  }
   // console.log('tag', tag);
   // console.log('res', res);
   if (res?.map_info) {
@@ -273,7 +301,8 @@ socket.on("ticktack player", (res) => {
   //   lastBomb = Date.now();
   //   isPreventing = true;
   // }
-  if (player?.dragonEggMystic && player?.dragonEggMystic > mysEgg) {
+  if (player?.dragonEggMystic &&
+     player?.dragonEggMystic > mysEgg) {
     console.log('mys eggggggggggggggggggggggggggggggggggggggggggg');
     mysEgg = player?.dragonEggMystic;
   } 
@@ -284,7 +313,7 @@ socket.on("ticktack player", (res) => {
     }
     preLives = player?.lives;
   }
-  console.log('mainTaskStack', mainTaskStack.getAllTasks().map(t => t.name));
+  // console.log('mainTaskStack', mainTaskStack.getAllTasks().map(t => t.name));
   mainTaskStackSubject.next({
     action: IMainStackAction.DO,
   });
@@ -295,5 +324,10 @@ socket.on("ticktack player", (res) => {
 
 //API-3b
 socket.on("drive player", (res) => {
+  // console.log('drive player', res)
+  const { direction, player_id } = res;
+  if (player_id === PLAYER_ID) {
+    console.log('drive player', res)
+  }
   const tasks = mainTaskStack.getAllTasks();
 });

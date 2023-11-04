@@ -1,4 +1,4 @@
-import { getBombItemPlayerAreaRawGrid, getDestinationNode, getMappedBombWithPower, getPlayer, getStringPathFromShortestPath } from "../algorithms";
+import { drivePlayer, getBombItemPlayerAreaRawGrid, getDestinationNode, getMappedBombWithPower, getPlayer, getStringPathFromShortestPath } from "../algorithms";
 import { breadthFirstSearch, createGrid, getShortestPath } from "../algorithms/bredth-first-search";
 import { socket } from "../app";
 import { CANNOT_GO_NODE, EGG_NODE, GOOD_EGG_NODES, MYS_EGG_NODE } from "../constants";
@@ -74,7 +74,8 @@ export default class CollectItemTask extends BaseTask {
             return;
           }
           const stringPathToShortestPath = getStringPathFromShortestPath(player.currentPosition, shortestPath);
-          socket.emit("drive player", { direction: stringPathToShortestPath });
+          // socket.emit("drive player", { direction: stringPathToShortestPath });
+          drivePlayer(stringPathToShortestPath);
         }
         if (this.movingOn) {
           if (this.movingOn.col === player.currentPosition.col && this.movingOn.row === player.currentPosition.row) {

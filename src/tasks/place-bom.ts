@@ -9,14 +9,16 @@ import {
   TNodeValue,
 } from "../types/node";
 import BaseTask from "./base-task";
-import { socket } from "../app";
+import { shouldDriveSubject, socket } from "../app";
 import {
+  drivePlayer,
   getDestinationNode,
   getMappedBombWithPower,
   getOpponent,
   getPlayer,
   getStartNode,
   getStringPathFromShortestPath,
+  isBombAvailable,
   isPlayerIsInDangerousArea,
 } from "../algorithms";
 import {
@@ -122,7 +124,9 @@ export default class PlaceBombTask extends BaseTask {
           this.escapingDestination = { row: destinationNode.row, col: destinationNode.col};
         }
         if (stringToShortestPath) {
-          socket.emit("drive player", { direction: stringToShortestPath });
+          shouldDriveSubject.next(true);
+          // socket.emit("drive player", { direction: stringToShortestPath });
+          drivePlayer(stringToShortestPath, 'place-bomb escapeFromBomb');
         }
       } else {
         this.stop(this.id);
@@ -147,17 +151,8 @@ export default class PlaceBombTask extends BaseTask {
     const maxRowNumber = map.length;
     const maxColNumber = map[0].length;
     const startPosition = player.currentPosition;
-    if (!this.bombPlaced) {
-      if (!this.shouldPlaceBombHere(mapInfo)) {
-        this.stop(this.id);
-        return;
-      } 
-      //place a bomb
-      stringPath = stringPath + "b";
-      this.bombPlaced = startPosition;
-      socket.emit("drive player", { direction: stringPath });
-      return;
-    }
+    this.bombPlaced = startPosition;
+
     const { grid: nodeGrid} = createGrid(
       map,
       player.currentPosition,
@@ -167,86 +162,37 @@ export default class PlaceBombTask extends BaseTask {
     );
 
     if (this.bombPlaced && !bombs.find(b => b.col === this.bombPlaced?.col && b.row === this.bombPlaced.row)) {
-      if (isPlayerIsInDangerousArea(players, bombs, nodeGrid)) {
+      if (isPlayerIsInDangerousArea(map, players, bombs, nodeGrid)) {
         this.escapeFromBomb(player, mapInfo);
         return;
       }
       this.bombPlaced = undefined;
     }
 
+    if (!this.bombPlaced) {
+      if (!this.shouldPlaceBombHere(mapInfo)) {
+        this.stop(this.id);
+        return;
+      } 
+      //place a bomb
+      stringPath = stringPath + "b";
+      // this.bombPlaced = startPosition;
+      // socket.emit("drive player", { direction: stringPath });
+      drivePlayer(stringPath, 'place-bomb placeBombTaskObserver');
+      if (isPlayerIsInDangerousArea(map, players, bombs, nodeGrid)) {
+        setTimeout(() => {
+          this.escapeFromBomb(player, mapInfo);
+        }, 50);
+        return;
+      }
+      return;
+    }
+
     if (
       this.bombPlaced && bombs.find(b => b.col === this.bombPlaced?.col && b.row === this.bombPlaced.row)
     ) {
-      // if (isPlayerIsInDangerousArea(players, bombs, nodeGrid)) {
-      //   this.escapeFromBomb(player, mapInfo)
-      //   return;
-      // }
       this.stop(this.id);
       return;
-      // const bombsWithPower = getMappedBombWithPower(bombs, players);
-      // const myBomb = bombsWithPower.find(b => b.col === this.bombPlaced?.col && b.row === this.bombPlaced?.row);
-      // if (!myBomb) {
-      //   this.stop(this.id);
-      //   return;
-      // }
-      // const safeNode = this.findTheSafePlace(
-      //   { col: this.bombPlaced.col, row: this.bombPlaced.row },
-      //   mapInfo,
-      //   player
-      // );
-
-      // if (safeNode?.row === player.currentPosition.row && safeNode?.col === player.currentPosition.col) {
-      //   this.stop(this.id);
-      //   return;
-      // }
-
-      // const nodeGrid = createGridForPlaceBomb(map, player.currentPosition, spoils, bombs, players, myBomb, safeNode);
-      // const startbombsAreaMap = getBombAffectedAreaMapV2([myBomb], maxRowNumber, maxColNumber);
-      // const startBombsAreaKeys = Object.keys(startbombsAreaMap);
-      // const bombsWithoutMyBomb = bombsWithPower.filter(bombs => bombs.col !== myBomb.col || bombs.row !== myBomb.row);
-      // const bombsAreaMapWithoutMyBomb = getBombAffectedAreaMapV2(bombsWithoutMyBomb, maxRowNumber, maxColNumber);
-      // const opponent = getOpponent(players);
-      // startBombsAreaKeys.forEach(row => {
-      //   startbombsAreaMap[row].forEach(col => {
-      //     if ([STONE_NODE, WOOD_NODE, MYS_EGG_NODE, EGG_NODE, HOLE_NODE].includes(nodeGrid[parseInt(row)][col].value)) {
-      //       return;
-      //     };
-      //     if (bombsAreaMapWithoutMyBomb[row]?.length > 0 && bombsAreaMapWithoutMyBomb[row].includes(col)) return;
-      //     if (parseInt(row) === opponent?.currentPosition.row && col === opponent?.currentPosition.col) return;
-      //     if (parseInt(row) === myBomb.row && col === myBomb.col) return;
-      //     nodeGrid[parseInt(row)][col].value = NORMAL_NODE;
-      //   })
-      // })
-
-
-      // const inOrderVisitedArray = breadthFirstSearch(
-      //   nodeGrid,
-      //   CAN_GO_NODES,
-      //   undefined
-      // );
-      // let destinationNode = getDestinationNode(inOrderVisitedArray);
-      // if (!destinationNode) {
-      //   const nodeGrid = createGrid(
-      //     map,
-      //     player.currentPosition,
-      //     spoils,
-      //     bombs,
-      //     players
-      //   );
-      //   if (isPlayerIsInDangerousArea(players, bombs, nodeGrid)) {
-      //     console.log('escapeeeeeee');
-      //     this.escapeFromBomb(player, mapInfo)
-      //     return;
-      //   }
-      // }
-      // const shortestPath = getShortestPath(destinationNode);
-      // const stringPathToShortestPath = getStringPathFromShortestPath(
-      //   player.currentPosition,
-      //   shortestPath
-      // );
-      // if (stringPathToShortestPath) {
-      //   socket.emit("drive player", { direction: stringPathToShortestPath });
-      // }
     }
   };
 }
