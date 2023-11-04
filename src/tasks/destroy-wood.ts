@@ -1,6 +1,5 @@
 import {
   calculateTimeIfHaveDistance,
-  drivePlayer,
   getBestLand,
   getCoordinateComboKey,
   getDestinationNode,
