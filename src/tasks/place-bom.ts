@@ -128,6 +128,42 @@ export default class PlaceBombTask extends BaseTask {
         this.stop(this.id);
         return
       }
+    } else {
+      const { grid: nodeGrid } = createGridToAvoidBomb(
+        map,
+        player.currentPosition,
+        spoils,
+        bombs,
+        players
+      );
+      // nodeGrid[player.currentPosition.row][player.currentPosition.row].value =
+      //   NORMAL_NODE;
+      const inOrderVisitedArray = breadthFirstSearch(
+        nodeGrid,
+        player,
+        {},
+        [...CAN_GO_NODES, BOMB_AFFECTED_NODE],
+        undefined,
+        CAN_GO_NODES
+      );
+      const secondaryDestinationNode = getDestinationNode(inOrderVisitedArray);
+      if (secondaryDestinationNode) {
+        if (player.currentPosition.row !== secondaryDestinationNode.row || player.currentPosition.col !== secondaryDestinationNode.col) { 
+          const shortestPath = getShortestPath(secondaryDestinationNode);
+          const stringToShortestPath = getStringPathFromShortestPath(
+            player.currentPosition,
+            shortestPath
+          );
+          if (stringToShortestPath) {
+            // shouldDriveSubject.next(true);
+            socket.emit("drive player", { direction: stringToShortestPath });
+          }
+        } else {
+          this.stop(this.id);
+        }
+      } else {
+        this.stop(this.id);
+      }
     }
   };
 

@@ -2,7 +2,7 @@ import express from "express";
 import { Server } from "socket.io";
 import ioc from "socket.io-client";
 import http from "http";
-import { EGG_NODE, GAME_ID, PLAYER_ID } from "./constants";
+import { EGG_NODE, GAME_ID, PLAYER_ID, PLAYER_ID_LONG } from "./constants";
 import {
   getDestinationNode,
   getEndNode,
@@ -41,8 +41,9 @@ import GoToAndPlaceBombTask from "./tasks/go-to-and-place-boom";
 import killTargetAdviser from "./advisers/kill-target-adviser";
 import KillTarget from "./tasks/kill-target";
 import OpenRoad from "./tasks/open-road";
+import { lastBombPlacedTimeSubject } from "./subjects/lastBombPlacedTimeSubject";
 
-const targetServer = "http://146.190.83.250/";
+const targetServer = "http://192.168.0.199/";
 
 const app = express();
 const port = 3000;
@@ -126,13 +127,11 @@ export const mainTaskStackSubject = new BehaviorSubject<{
     singleTarget?: INode | IPosition;
     comeToNextToPosition?: boolean;
     taskId?: string;
-    isMysIncluded?: boolean;
+    isMysIncluded?: IPosition[] | undefined;
     isFictitious?: boolean;
   };
 } | null>(null);
 
-
-mainTaskStackSubject.subscribe()
 
 mainTaskStackSubject.subscribe((mainStackBehavior) => {
   if (mainStackBehavior) {
@@ -212,7 +211,7 @@ advisersSubject.subscribe(killTargetAdviser);
 socket.on("connect", () => {
   console.log("[Socket] connected to server");
   // API-1a
-  socket.emit("join game", { game_id: GAME_ID, player_id: PLAYER_ID });
+  socket.emit("join game", { game_id: GAME_ID, player_id: PLAYER_ID_LONG });
 });
 
 socket.on("disconnect", () => {
@@ -269,10 +268,13 @@ socket.on("ticktack player", (res) => {
     })
   }
   const player = getPlayer(players);
-  // if (bombs.length > 0 && bombs.find((bomb) => bomb.remainTime === 0) && !isPreventing) {
-  //   lastBomb = Date.now();
-  //   isPreventing = true;
-  // }
+  
+  if (player_id === PLAYER_ID) {
+    if (tag === 'bomb:explosed') {
+      lastBombPlacedTimeSubject.next(Date.now());
+    }
+  }
+
   if (player?.dragonEggMystic && player?.dragonEggMystic > mysEgg) {
     console.log('mys eggggggggggggggggggggggggggggggggggggggggggg');
     mysEgg = player?.dragonEggMystic;
@@ -284,7 +286,7 @@ socket.on("ticktack player", (res) => {
     }
     preLives = player?.lives;
   }
-  console.log('mainTaskStack', mainTaskStack.getAllTasks().map(t => t.name));
+  // console.log('mainTaskStack', mainTaskStack.getAllTasks().map(t => t.name));
   mainTaskStackSubject.next({
     action: IMainStackAction.DO,
   });
@@ -295,5 +297,6 @@ socket.on("ticktack player", (res) => {
 
 //API-3b
 socket.on("drive player", (res) => {
-  const tasks = mainTaskStack.getAllTasks();
+  // const tasks = mainTaskStack.getAllTasks();
+  console.log('on drive player', res);
 });

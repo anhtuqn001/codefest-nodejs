@@ -1,8 +1,11 @@
 import {
   BOMB_AFFECTED_NODE,
+  BOMB_SETUP_DELAY,
   CAN_GO_NODES,
   EGG_NODE,
   EGG_SPEED_MAPPING,
+  EGG_SPEED_MAPPING_2,
+  EGG_SPEED_MAPPING_3,
   MYS_EGG_NODE,
   NEAR_BY_PLAYER_AREA_LAYER,
   NODE_SPOIL_TYPE_MAPPING,
@@ -11,6 +14,7 @@ import {
   STONE_NODE,
   WOOD_NODE,
 } from "../constants";
+import { lastBombPlacedTimeSubject } from "../subjects/lastBombPlacedTimeSubject";
 import {
   IBestLandType,
   IBomb,
@@ -456,7 +460,7 @@ export const isPositionHaveBomb = (position: IPosition, bombs: IBomb[]) => {
 
 export const getSpeed = (player: IPlayer) => {
   const dragonEggSpeed = player.dragonEggSpeed > 2 ? 2 : player.dragonEggSpeed;
-  const speed = EGG_SPEED_MAPPING[dragonEggSpeed.toString()];
+  const speed = EGG_SPEED_MAPPING_3[dragonEggSpeed.toString()];
   return speed;
 }
 
@@ -480,4 +484,11 @@ export const isWoodBeingAffectedByBombs = (mapInfo: IMapInfo, woodPosition: IPos
     return true;
   }
   return false
-} 
+}
+
+export const isBombAvailable = (player: IPlayer) => {
+  const lastbomPlacedTime = lastBombPlacedTimeSubject.value;
+  const distanceTime = Date.now() - lastbomPlacedTime - BOMB_SETUP_DELAY;
+  const { delay } = player;
+  return distanceTime > delay;
+}

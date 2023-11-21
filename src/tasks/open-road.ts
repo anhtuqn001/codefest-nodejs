@@ -68,23 +68,35 @@ export default class OpenRoad extends BaseTask {
   //   breadthFirstSearchWithScore(nodeGrid, players, bombsAreaRemainingTime, )
   // }
 
-  getNodeToDestroy(shortestPath: INode[], mapInfo: IMapInfo) {
+  getNodeToDestroy(shortestPath: INode[], mapInfo: IMapInfo): { node: INode | undefined; withMys: IPosition[] | undefined } {
     const { map, spoils, bombs, players } = mapInfo;
     let currentNode = undefined;
-    let withMys = false;
+    let withMys: IPosition[] | undefined = undefined;;
     const player = getPlayer(players);
     if (!player)
       return {
         node: undefined,
-        withMys: false,
+        withMys: undefined,
       };
     const destination = shortestPath[shortestPath.length - 1];
     if (destination) {
       let coppiedDestination = destination;
       while (coppiedDestination.previousNode) {
         if (coppiedDestination.value === MYS_EGG_NODE) {
-          withMys = true;
-          break;
+          withMys = withMys
+            ? [
+                ...withMys,
+                {
+                  row: coppiedDestination.row,
+                  col: coppiedDestination.col,
+                },
+              ]
+            : [
+                {
+                  row: coppiedDestination.row,
+                  col: coppiedDestination.col,
+                },
+              ];
         }
         coppiedDestination = coppiedDestination.previousNode;
       }
@@ -96,7 +108,7 @@ export default class OpenRoad extends BaseTask {
           if (isWoodBeingAffectedByBombs(mapInfo, currentNode)) {
             return {
               node: undefined,
-              withMys: false,
+              withMys: undefined
             };
           } else {
             const { grid: nodeGrid, bombsAreaRemainingTime } = createGrid(
@@ -124,15 +136,59 @@ export default class OpenRoad extends BaseTask {
                 return 0;
               });
             const destinationNodeToPlaceBomb = sortedInOrderVisitedArray[0];
+            const backUpdestinationNodeToPlaceBomb = sortedInOrderVisitedArray[1];
             if (destinationNodeToPlaceBomb) {
               let copiedDestinationNodeToPlaceBomb = destinationNodeToPlaceBomb;
-              let tempWithMys = false;
+              let tempWithMys: IPosition[] | undefined = undefined;
               while (copiedDestinationNodeToPlaceBomb.previousNode) {
                 if (copiedDestinationNodeToPlaceBomb.value === MYS_EGG_NODE) {
-                  tempWithMys = true;
-                  break;
+                  tempWithMys = tempWithMys
+                  ? [
+                      ...tempWithMys,
+                      {
+                        row: copiedDestinationNodeToPlaceBomb.row,
+                        col: copiedDestinationNodeToPlaceBomb.col,
+                      },
+                    ]
+                  : [
+                      {
+                        row: copiedDestinationNodeToPlaceBomb.row,
+                        col: copiedDestinationNodeToPlaceBomb.col,
+                      },
+                    ];
                 }
-                copiedDestinationNodeToPlaceBomb = copiedDestinationNodeToPlaceBomb.previousNode;
+                  copiedDestinationNodeToPlaceBomb =
+                  copiedDestinationNodeToPlaceBomb.previousNode;
+              }
+              if (tempWithMys && backUpdestinationNodeToPlaceBomb) {
+                let copiedBackUpDestinationNodeToPlaceBomb = backUpdestinationNodeToPlaceBomb;
+                let backUpTempWithMys: IPosition[] | undefined = undefined;
+                while (copiedBackUpDestinationNodeToPlaceBomb.previousNode) {
+                  if (copiedBackUpDestinationNodeToPlaceBomb.value === MYS_EGG_NODE) {
+                    backUpTempWithMys = backUpTempWithMys
+                    ? [
+                        ...backUpTempWithMys,
+                        {
+                          row: copiedBackUpDestinationNodeToPlaceBomb.row,
+                          col: copiedBackUpDestinationNodeToPlaceBomb.col,
+                        },
+                      ]
+                    : [
+                        {
+                          row: copiedBackUpDestinationNodeToPlaceBomb.row,
+                          col: copiedBackUpDestinationNodeToPlaceBomb.col,
+                        },
+                      ];
+                  }
+                  copiedBackUpDestinationNodeToPlaceBomb =
+                  copiedBackUpDestinationNodeToPlaceBomb.previousNode;
+                }
+                if (!backUpTempWithMys) {
+                  return {
+                    node: backUpdestinationNodeToPlaceBomb,
+                    withMys: undefined,
+                  };
+                }
               }
               return {
                 node: destinationNodeToPlaceBomb,
@@ -141,7 +197,7 @@ export default class OpenRoad extends BaseTask {
             } else {
               return {
                 node: undefined,
-                withMys: false,
+                withMys: undefined,
               };
             }
           }
@@ -196,6 +252,42 @@ export default class OpenRoad extends BaseTask {
       } else {
         // this.stop(this.id);
         return;
+      }
+    } else {
+      const { grid: nodeGrid } = createGridToAvoidBomb(
+        map,
+        player.currentPosition,
+        spoils,
+        bombs,
+        players
+      );
+      // nodeGrid[player.currentPosition.row][player.currentPosition.row].value =
+      //   NORMAL_NODE;
+      const inOrderVisitedArray = breadthFirstSearch(
+        nodeGrid,
+        player,
+        {},
+        [...CAN_GO_NODES, BOMB_AFFECTED_NODE],
+        undefined,
+        CAN_GO_NODES
+      );
+      const secondaryDestinationNode = getDestinationNode(inOrderVisitedArray);
+      if (secondaryDestinationNode) {
+        if (player.currentPosition.row !== secondaryDestinationNode.row || player.currentPosition.col !== secondaryDestinationNode.col) { 
+          const shortestPath = getShortestPath(secondaryDestinationNode);
+          const stringToShortestPath = getStringPathFromShortestPath(
+            player.currentPosition,
+            shortestPath
+          );
+          if (stringToShortestPath) {
+            // shouldDriveSubject.next(true);
+            socket.emit("drive player", { direction: stringToShortestPath });
+          }
+        } else {
+          this.stop(this.id);
+        }
+      } else {
+        this.stop(this.id);
       }
     }
   };

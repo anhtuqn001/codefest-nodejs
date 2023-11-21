@@ -138,6 +138,42 @@ export default class DestroyWoodTask extends BaseTask {
       } else {
         this.stop(this.id);
       }
+    }else {
+      const { grid: nodeGrid } = createGridToAvoidBomb(
+        map,
+        player.currentPosition,
+        spoils,
+        bombs,
+        players
+      );
+      // nodeGrid[player.currentPosition.row][player.currentPosition.row].value =
+      //   NORMAL_NODE;
+      const inOrderVisitedArray = breadthFirstSearch(
+        nodeGrid,
+        player,
+        {},
+        [...CAN_GO_NODES, BOMB_AFFECTED_NODE],
+        undefined,
+        CAN_GO_NODES
+      );
+      const secondaryDestinationNode = getDestinationNode(inOrderVisitedArray);
+      if (secondaryDestinationNode) {
+        if (player.currentPosition.row !== secondaryDestinationNode.row || player.currentPosition.col !== secondaryDestinationNode.col) { 
+          const shortestPath = getShortestPath(secondaryDestinationNode);
+          const stringToShortestPath = getStringPathFromShortestPath(
+            player.currentPosition,
+            shortestPath
+          );
+          if (stringToShortestPath) {
+            // shouldDriveSubject.next(true);
+            socket.emit("drive player", { direction: stringToShortestPath });
+          }
+        } else {
+          this.stop(this.id);
+        }
+      } else {
+        this.stop(this.id);
+      }
     }
   };
 
@@ -318,7 +354,6 @@ export default class DestroyWoodTask extends BaseTask {
     const fictitiousDestinationNode = fictitiousSortedInOrderVisitedArray[0];
     // console.log('destinationNode', destinationNode?.row + "|" + destinationNode?.col + "|" + destinationNode?.score)
     // console.log('fictitiousDestinationNode', fictitiousDestinationNode?.row + "|" + fictitiousDestinationNode?.col + "|" + fictitiousDestinationNode?.score);
-    console.log(destinationNode && fictitiousDestinationNode && (destinationNode.row !== fictitiousDestinationNode.row || destinationNode.col !== fictitiousDestinationNode.col));
     if (destinationNode && fictitiousDestinationNode && (destinationNode.row !== fictitiousDestinationNode.row || destinationNode.col !== fictitiousDestinationNode.col)) {
       const calculatedNode = this.calculateScoreIfPlaceBombAtDestination(destinationNode, mapInfo);
       const calculatedFictitiousNode = this.calculateScoreIfPlaceBombAtDestination(fictitiousDestinationNode, mapInfo);

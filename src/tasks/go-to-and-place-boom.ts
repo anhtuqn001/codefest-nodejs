@@ -28,9 +28,9 @@ export default class GoToAndPlaceBombTask extends BaseTask {
   thiz: GoToAndPlaceBombTask = this;
   destinationPosition: INode | undefined = undefined;
   escapingDestination: IPosition | undefined = undefined;
-  isMysIncluded: boolean = false;
+  isMysIncluded: IPosition[] | undefined = undefined;
   isFictitious: boolean = false;
-  constructor(globalSubject: IGloBalSubject, destinationPosition?: INode, isMysIncluded: boolean = false, isFictitious: boolean = false) {
+  constructor(globalSubject: IGloBalSubject, destinationPosition?: INode, isMysIncluded: IPosition[] | undefined = undefined, isFictitious: boolean = false) {
     super(globalSubject);
     this.thiz = this;
     this.name = "go-to-and-place-bomb";
@@ -88,6 +88,42 @@ export default class GoToAndPlaceBombTask extends BaseTask {
         }
         if (stringToShortestPath) {
           socket.emit("drive player", { direction: stringToShortestPath });
+        }
+      } else {
+        this.stop(this.id);
+      }
+    } else {
+      const { grid: nodeGrid } = createGridToAvoidBomb(
+        map,
+        player.currentPosition,
+        spoils,
+        bombs,
+        players
+      );
+      // nodeGrid[player.currentPosition.row][player.currentPosition.row].value =
+      //   NORMAL_NODE;
+      const inOrderVisitedArray = breadthFirstSearch(
+        nodeGrid,
+        player,
+        {},
+        [...CAN_GO_NODES, BOMB_AFFECTED_NODE],
+        undefined,
+        CAN_GO_NODES
+      );
+      const secondaryDestinationNode = getDestinationNode(inOrderVisitedArray);
+      if (secondaryDestinationNode) {
+        if (player.currentPosition.row !== secondaryDestinationNode.row || player.currentPosition.col !== secondaryDestinationNode.col) { 
+          const shortestPath = getShortestPath(secondaryDestinationNode);
+          const stringToShortestPath = getStringPathFromShortestPath(
+            player.currentPosition,
+            shortestPath
+          );
+          if (stringToShortestPath) {
+            // shouldDriveSubject.next(true);
+            socket.emit("drive player", { direction: stringToShortestPath });
+          }
+        } else {
+          this.stop(this.id);
         }
       } else {
         this.stop(this.id);
@@ -151,11 +187,17 @@ export default class GoToAndPlaceBombTask extends BaseTask {
       players,
       this.destinationPosition
     );
+    if (this.isMysIncluded) {
+      for (let i = 0; i < this.isMysIncluded.length; i++) {
+        nodeGrid[this.isMysIncluded[i].row][this.isMysIncluded[i].col].value =
+          BOMB_AFFECTED_NODE;
+      }
+    }
     const inOrderVisitedArray = breadthFirstSearch(
       nodeGrid,
       player,
       bombsAreaRemainingTime,
-      this.isMysIncluded ? [...CAN_GO_NODES, BOMB_AFFECTED_NODE, MYS_EGG_NODE] : [...CAN_GO_NODES, BOMB_AFFECTED_NODE],
+      [...CAN_GO_NODES, BOMB_AFFECTED_NODE],
       undefined
     );
     let destinationNode = getDestinationNode(inOrderVisitedArray);
